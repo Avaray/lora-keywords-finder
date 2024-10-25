@@ -1,9 +1,9 @@
-import os
 import hashlib
+import json
+import os
 import requests
 import gradio as gr
 from modules import scripts
-import json
 
 class LoraWordScript(scripts.Script):
 
@@ -62,6 +62,19 @@ class LoraWordScript(scripts.Script):
 
         print(f"File hash for {lora_file}: {file_hash}")  # Print the file hash to the console
 
+        known_dir = os.path.join(scripts.basedir(), "extensions", "lora-keyword-picker", "known")
+        json_file_path = os.path.join(known_dir, f"{file_hash}.json")
+
+        # Check if the JSON file exists
+        if os.path.exists(json_file_path):
+            # Load trained words from the JSON file
+            with open(json_file_path, "r") as f:
+                words = json.load(f)
+            # Print the trained words to the console
+            print(f"Found trained words for {lora_file}: {words} in {json_file_path}")
+            return gr.update(value=', '.join(words))  # Display keywords in the textbox
+
+        # If the JSON file does not exist, fetch from the API
         api_url = f"https://civitai.com/api/v1/model-versions/by-hash/{file_hash}"
 
         try:
@@ -69,8 +82,10 @@ class LoraWordScript(scripts.Script):
             if response.status_code == 200:
                 data = response.json()
                 words = data.get("trainedWords", [])
+                # Print number of trained words to the console and the words
+                print(f"Found {len(words)} trained words for {lora_file}: {words} in {api_url}")
                 # Save the trained words into a file located inside extensions dir under known folder as hash filename json
-                with open(os.path.join(scripts.basedir(), "extensions", "lora-keyword-picker", "known", f"{file_hash}.json"), "w") as f:
+                with open(json_file_path, "w") as f:
                     json.dump(words, f)  # Convert list to JSON string
                 # Join the words into a single string for the textbox
                 return gr.update(value=', '.join(words))  # Display keywords in the textbox
