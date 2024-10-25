@@ -15,8 +15,8 @@ I was inspired by [this Redddit post](https://www.reddit.com/r/StableDiffusion/c
 ## Usage
 
 1. Extension will be visible in **txt2img** and **img2img** tabs as **LoRA Keywords Picker**.
-2. Select LoRA file from the list.
-3. Fetched keywords will be displayed in the text area near the list.
+2. Select LoRA file from dropdown list.
+3. Fetched keywords will be displayed below the dropdown list.
 
 ## Notes
 
