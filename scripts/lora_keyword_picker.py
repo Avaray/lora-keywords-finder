@@ -3,7 +3,7 @@ import json
 import os
 import re
 import requests
-import gradio as gr
+import gradio as gr # type: ignore
 from modules import scripts
 
 class LoraWordScript(scripts.Script):
