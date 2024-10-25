@@ -3,7 +3,7 @@ import json
 import os
 import re
 import requests
-import gradio as gr # type: ignore
+import gradio as gr
 from modules import scripts
 
 class LoraKeywordsPicker(scripts.Script):
@@ -21,25 +21,29 @@ class LoraKeywordsPicker(scripts.Script):
         with gr.Group():
             with gr.Accordion("LoRA Keywords Picker", open=False):
                 with gr.Blocks():
+                    # Add an empty choice as the default selection
+                    choices = [""] + self.list_lora_files()
+                    
                     lora_dropdown = gr.Dropdown(
                         label="Select LoRA",
-                        choices=self.list_lora_files(),
+                        choices=choices,
+                        value="",  # Set empty string as default value
                         type="value"
                     )
                 
-                    # Text field to display trained words
                     trained_words_display = gr.Textbox(
                         label="",
-                        interactive=False,  # Make it read-only
-                        placeholder="Keywords will appear here..."
+                        interactive=False,
+                        value="",  # Set empty string as initial value
+                        placeholder="Select a LoRA to see its keywords..."
                     )
 
-                # Event handler for dropdown change
-                lora_dropdown.change(
-                    fn=self.get_trained_words,
-                    inputs=[lora_dropdown],
-                    outputs=[trained_words_display]
-                )
+                    # Event handler for dropdown change
+                    lora_dropdown.change(
+                        fn=self.get_trained_words,
+                        inputs=[lora_dropdown],
+                        outputs=[trained_words_display]
+                    )
 
         return [lora_dropdown, trained_words_display]
 
@@ -47,16 +51,15 @@ class LoraKeywordsPicker(scripts.Script):
         return re.sub(r",(?=[^\s])", ", ", keyword).strip()
 
     def list_lora_files(self):
-        """Lists all LoRA files in the specified directory."""
         lora_dir = os.path.join(scripts.basedir(), "..", "..", "models", "Lora")
         lora_files = []
         for filename in os.listdir(lora_dir):
             if filename.endswith((".pt", ".safetensors")):
                 lora_files.append(filename)
-        return lora_files
+        return sorted(lora_files)  # Sort the files alphabetically
 
     def get_trained_words(self, lora_file):
-        """Gets trained words for a LoRA file by making an API request."""
+        # Return empty string if no file is selected or empty string is selected
         if not lora_file:
             return gr.update(value="")
 
@@ -64,7 +67,7 @@ class LoraKeywordsPicker(scripts.Script):
         with open(os.path.join(lora_dir, lora_file), "rb") as f:
             file_hash = hashlib.sha256(f.read()).hexdigest()
 
-        print(f"File hash for {lora_file}: {file_hash}")  # Print the file hash to the console
+        print(f"Selected {lora_file}, file hash: {file_hash}")
 
         known_dir = os.path.join(scripts.basedir(), "extensions", "lora-keywords-picker", "known")
         json_file_path = os.path.join(known_dir, f"{file_hash}.json")
@@ -74,9 +77,10 @@ class LoraKeywordsPicker(scripts.Script):
             # Load trained words from the JSON file
             with open(json_file_path, "r") as f:
                 words = json.load(f)
-            # Print the trained words to the console
-            print(f"Found trained words for {lora_file}: {words} in {json_file_path}")
-            return gr.update(value=', '.join(words))  # Display keywords in the textbox
+            print(f"Found cached keywords for {lora_file}: {words}")
+            if not words:  # If cached words array is empty
+                return gr.update(value="No keywords provided for this LoRA")
+            return gr.update(value=', '.join(words))
 
         # If the JSON file does not exist, fetch from the API
         api_url = f"https://civitai.com/api/v1/model-versions/by-hash/{file_hash}"
@@ -86,16 +90,30 @@ class LoraKeywordsPicker(scripts.Script):
             if response.status_code == 200:
                 data = response.json()
                 words = data.get("trainedWords", [])
-                # Normalize the keywords
+                
+                # Check if words array is empty
+                if not words:
+                    print(f"No keywords found for {lora_file}")
+                    # Save empty array to cache to prevent repeated API calls
+                    os.makedirs(known_dir, exist_ok=True)
+                    with open(json_file_path, "w") as f:
+                        json.dump(words, f)
+                    return gr.update(value="No keywords provided for this LoRA")
+                
                 words = [self.normalize_keyword(word) for word in words]
-                # Print number of trained words to the console and the words
-                print(f"Found {len(words)} trained words for {lora_file}: {words} in {api_url}")
-                # Save the trained words into a file located inside extensions dir under known folder as hash filename json
+                print(f"Fetched {len(words)} keywords for {lora_file}")
+                
+                # Ensure the known directory exists
+                os.makedirs(known_dir, exist_ok=True)
+                
+                # Save the trained words
                 with open(json_file_path, "w") as f:
-                    json.dump(words, f)  # Convert list to JSON string
-                # Join the words into a single string for the textbox
-                return gr.update(value=', '.join(words))  # Display keywords in the textbox
+                    json.dump(words, f)
+                
+                return gr.update(value=', '.join(words))
+            else:
+                print(f"API request failed with status code {response.status_code}")
+                return gr.update(value="Failed to fetch keywords from CivitAI API")
         except Exception as e:
             print(f"Error fetching trained words: {e}")
-
-        return gr.update(value="")
+            return gr.update(value="Error fetching keywords")
