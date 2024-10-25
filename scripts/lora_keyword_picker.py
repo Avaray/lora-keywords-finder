@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+import re
 import requests
 import gradio as gr
 from modules import scripts
@@ -19,18 +20,18 @@ class LoraWordScript(scripts.Script):
     def ui(self, is_img2img):
         with gr.Group():
             with gr.Accordion("LoRA Keywords Picker", open=False):
-                with gr.Row():
+                with gr.Blocks():
                     lora_dropdown = gr.Dropdown(
-                        choices=self.list_lora_files(),
                         label="Select LoRA",
+                        choices=self.list_lora_files(),
                         type="value"
                     )
-                    
+                
                     # Text field to display trained words
                     trained_words_display = gr.Textbox(
-                        label="Trained Words",
+                        label="",
                         interactive=False,  # Make it read-only
-                        placeholder="Selected keywords will appear here..."
+                        placeholder="Keywords will appear here..."
                     )
 
                 # Event handler for dropdown change
@@ -41,6 +42,9 @@ class LoraWordScript(scripts.Script):
                 )
 
         return [lora_dropdown, trained_words_display]
+
+    def normalize_keyword(self, keyword):
+        return re.sub(r",(?=[^\s])", ", ", keyword).strip()
 
     def list_lora_files(self):
         """Lists all LoRA files in the specified directory."""
@@ -82,6 +86,8 @@ class LoraWordScript(scripts.Script):
             if response.status_code == 200:
                 data = response.json()
                 words = data.get("trainedWords", [])
+                # Normalize the keywords
+                words = [self.normalize_keyword(word) for word in words]
                 # Print number of trained words to the console and the words
                 print(f"Found {len(words)} trained words for {lora_file}: {words} in {api_url}")
                 # Save the trained words into a file located inside extensions dir under known folder as hash filename json
