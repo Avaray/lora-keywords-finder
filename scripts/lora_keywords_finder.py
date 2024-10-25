@@ -25,14 +25,14 @@ class LoraKeywordsFinder(scripts.Script):
                     choices = [""] + self.list_lora_files()
                     
                     lora_dropdown = gr.Dropdown(
-                        label="Select LoRA",
+                        show_label=False,
                         choices=choices,
                         value="",  # Set empty string as default value
                         type="value"
                     )
                 
                     trained_words_display = gr.Textbox(
-                        label="",
+                        show_label=False,
                         interactive=False,
                         value="",  # Set empty string as initial value
                         placeholder="Select a LoRA to see its keywords..."
