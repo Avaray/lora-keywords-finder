@@ -23,5 +23,5 @@ I was inspired by [this Redddit post](https://www.reddit.com/r/StableDiffusion/c
 - It only works with models that are available on [CivitAI](https://civitai.com/models).
 - It only returns the keywords if author specified them in the model description.
 - It saves the keywords on disk after fetching them for the first time. 
-- If CivitAI API is down, you won't get any keywords.
+- If CivitAI API is down, you won't get any new keywords.
 - I'm planning to add more features in the future.
