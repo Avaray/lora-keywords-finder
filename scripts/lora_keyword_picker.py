@@ -3,6 +3,7 @@ import hashlib
 import requests
 import gradio as gr
 from modules import scripts
+import json
 
 class LoraWordScript(scripts.Script):
 
@@ -59,6 +60,8 @@ class LoraWordScript(scripts.Script):
         with open(os.path.join(lora_dir, lora_file), "rb") as f:
             file_hash = hashlib.sha256(f.read()).hexdigest()
 
+        print(f"File hash for {lora_file}: {file_hash}")  # Print the file hash to the console
+
         api_url = f"https://civitai.com/api/v1/model-versions/by-hash/{file_hash}"
 
         try:
@@ -66,6 +69,9 @@ class LoraWordScript(scripts.Script):
             if response.status_code == 200:
                 data = response.json()
                 words = data.get("trainedWords", [])
+                # Save the trained words into a file located inside extensions dir under known folder as hash filename json
+                with open(os.path.join(scripts.basedir(), "extensions", "lora-keyword-picker", "known", f"{file_hash}.json"), "w") as f:
+                    json.dump(words, f)  # Convert list to JSON string
                 # Join the words into a single string for the textbox
                 return gr.update(value=', '.join(words))  # Display keywords in the textbox
         except Exception as e:
