@@ -22,7 +22,7 @@ class LoraKeywordsFinder(scripts.Script):
 
     def ui(self, is_img2img):
         with gr.Accordion("LoRA Keywords Finder", open=False):
-            with gr.Blocks():
+            with gr.Row():
                 # Add an empty choice as the default selection
                 choices = [""] + self.list_lora_files()
                 
@@ -33,6 +33,9 @@ class LoraKeywordsFinder(scripts.Script):
                     type="value"
                 )
 
+                reload_loras = gr.Button("🔄", scale=0, value="Reload list", elem_classes=["tool"])
+
+            with gr.Row():
                 trained_words_display = gr.Textbox(
                     show_label=False,
                     interactive=False,
@@ -46,6 +49,8 @@ class LoraKeywordsFinder(scripts.Script):
                     inputs=[lora_dropdown],
                     outputs=[trained_words_display]
                 )
+
+                # copy_keywords = gr.Button("📋", scale=0,  value="Copy to Clipboard", elem_classes=["tool"])
 
         return [lora_dropdown, trained_words_display]
 
