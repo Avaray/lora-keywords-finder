@@ -1,5 +1,5 @@
 name = 'Lora Keywords Picker'
-description = 'Extension is fetching trained keywords for a LoRA model from CivitAI API.'
+description = 'Extension to fetch trained keywords for a LoRA model from CivitAI API.'
 version = '0.0.1'
 author = 'Avaray'
 repository_url = 'https://github.com/Avaray/lora-keywords-picker'
