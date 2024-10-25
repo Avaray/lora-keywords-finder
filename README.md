@@ -6,7 +6,7 @@ I was inspired by [this Redddit post](https://www.reddit.com/r/StableDiffusion/c
 
 ## Installation
 
-1. Open Extensions tab in ForgeUI.
+1. Open "Extensions" tab in ForgeUI.
 2. Open "Install from URL" tab.
 3. Paste the following URL: `https://github.com/Avaray/lora-keyword-picker`
 4. Click "Install" button.
