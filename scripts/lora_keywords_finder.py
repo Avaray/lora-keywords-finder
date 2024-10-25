@@ -6,20 +6,20 @@ import requests
 import gradio as gr
 from modules import scripts
 
-class LoraKeywordsPicker(scripts.Script):
+class LoraKeywordsFinder(scripts.Script):
 
     def __init__(self):
         super().__init__()
 
     def title(self):
-        return "LoRA Keywords Picker"
+        return "LoRA Keywords Finder"
 
     def show(self, is_img2img):
         return scripts.AlwaysVisible
 
     def ui(self, is_img2img):
         with gr.Group():
-            with gr.Accordion("LoRA Keywords Picker", open=False):
+            with gr.Accordion("LoRA Keywords Finder", open=False):
                 with gr.Blocks():
                     # Add an empty choice as the default selection
                     choices = [""] + self.list_lora_files()
@@ -69,7 +69,7 @@ class LoraKeywordsPicker(scripts.Script):
 
         print(f"Selected {lora_file}, file hash: {file_hash}")
 
-        known_dir = os.path.join(scripts.basedir(), "extensions", "lora-keywords-picker", "known")
+        known_dir = os.path.join(scripts.basedir(), "extensions", "lora-keywords-finder", "known")
         json_file_path = os.path.join(known_dir, f"{file_hash}.json")
 
         # Check if the JSON file exists

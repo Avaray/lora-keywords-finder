@@ -1,6 +1,6 @@
-# 🧙‍♂️ LoRA Keywords Picker for ForgeUI
+# 🧙‍♂️ LoRA Keywords Finder for ForgeUI
 
-This Extension lets you fetch keywords for your [LoRA](https://wiki.civitai.com/wiki/Low-Rank_Adaptation) models using [CivitAI API](https://developer.civitai.com/docs/api/public-rest).  
+This Extension lets you find keywords for your [LoRA](https://wiki.civitai.com/wiki/Low-Rank_Adaptation) models using [CivitAI API](https://developer.civitai.com/docs/api/public-rest).  
 Created for [ForgeUI](https://github.com/lllyasviel/stable-diffusion-webui-forge) without plans to support other UIs.  
 I was inspired by [this Redddit post](https://www.reddit.com/r/StableDiffusion/comments/1gbjasv/automatic1111_and_loras_for_generation_is_there/).
 
@@ -8,13 +8,13 @@ I was inspired by [this Redddit post](https://www.reddit.com/r/StableDiffusion/c
 
 1. Open "Extensions" tab in ForgeUI.
 2. Open "Install from URL" tab.
-3. Paste the following URL: `https://github.com/Avaray/lora-keyword-picker`
+3. Paste the following URL: `https://github.com/Avaray/lora-keywords-finder`
 4. Click "Install" button.
 5. When the installation is done, reload UI.
 
 ## Usage
 
-1. Extension will be visible in **txt2img** and **img2img** tabs as **LoRA Keywords Picker**.
+1. Extension will be visible in **txt2img** and **img2img** tabs as **LoRA Keywords Finder**.
 2. Select LoRA file from dropdown list.
 3. Fetched keywords will be displayed below the dropdown list.
 
