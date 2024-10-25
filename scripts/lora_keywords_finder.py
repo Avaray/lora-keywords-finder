@@ -22,7 +22,7 @@ class LoraKeywordsFinder(scripts.Script):
 
     def ui(self, is_img2img):
         with gr.Accordion("LoRA Keywords Finder", open=False):
-            with gr.Blocks():
+            with gr.Row(variant="compact"):
                 # Add an empty choice as the default selection
                 choices = [""] + self.list_lora_files()
                 
@@ -33,6 +33,12 @@ class LoraKeywordsFinder(scripts.Script):
                     type="value"
                 )
 
+                reload_loras = gr.Button("🔄", scale=0, value="Reload list", elem_classes=["tool"])
+
+            # Add gap between rows
+            gr.HTML("<div style='height: 8px'></div>")
+
+            with gr.Row(variant="compact"):
                 trained_words_display = gr.Textbox(
                     show_label=False,
                     interactive=False,
@@ -47,6 +53,12 @@ class LoraKeywordsFinder(scripts.Script):
                     outputs=[trained_words_display]
                 )
 
+                # Event handler for reload button
+                reload_loras.click(
+                    fn=self.reload_lora_list,
+                    outputs=[lora_dropdown]
+                )
+
         return [lora_dropdown, trained_words_display]
 
     def normalize_keyword(self, keyword):
@@ -59,6 +71,11 @@ class LoraKeywordsFinder(scripts.Script):
             if filename.endswith((".pt", ".safetensors")):
                 lora_files.append(filename)
         return sorted(lora_files)  # Sort the files alphabetically
+
+    def reload_lora_list(self):
+        """Reload the list of LoRA files and update the dropdown"""
+        choices = [""] + self.list_lora_files()
+        return gr.update(choices=choices, value="")
 
     def get_trained_words(self, lora_file):
         # Return empty string if no file is selected or empty string is selected
