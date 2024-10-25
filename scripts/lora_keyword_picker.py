@@ -6,7 +6,7 @@ import requests
 import gradio as gr # type: ignore
 from modules import scripts
 
-class LoraWordScript(scripts.Script):
+class LoraKeywordsPicker(scripts.Script):
 
     def __init__(self):
         super().__init__()
