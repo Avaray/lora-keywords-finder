@@ -11,14 +11,14 @@ class LoraWordScript(scripts.Script):
         super().__init__()
 
     def title(self):
-        return "LoRA Keyword Picker"
+        return "LoRA Keywords Picker"
 
     def show(self, is_img2img):
         return scripts.AlwaysVisible
 
     def ui(self, is_img2img):
         with gr.Group():
-            with gr.Accordion("LoRA Keyword Picker", open=False):
+            with gr.Accordion("LoRA Keywords Picker", open=False):
                 with gr.Row():
                     lora_dropdown = gr.Dropdown(
                         choices=self.list_lora_files(),
@@ -62,7 +62,7 @@ class LoraWordScript(scripts.Script):
 
         print(f"File hash for {lora_file}: {file_hash}")  # Print the file hash to the console
 
-        known_dir = os.path.join(scripts.basedir(), "extensions", "lora-keyword-picker", "known")
+        known_dir = os.path.join(scripts.basedir(), "extensions", "lora-keywords-picker", "known")
         json_file_path = os.path.join(known_dir, f"{file_hash}.json")
 
         # Check if the JSON file exists

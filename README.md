@@ -1,4 +1,4 @@
-# 🧙‍♂️ LoRA Keyword Picker for ForgeUI
+# 🧙‍♂️ LoRA Keywords Picker for ForgeUI
 
 This Extension lets you fetch keywords for your [LoRA](https://wiki.civitai.com/wiki/Low-Rank_Adaptation) models using [CivitAI API](https://developer.civitai.com/docs/api/public-rest).  
 Created for [ForgeUI](https://github.com/lllyasviel/stable-diffusion-webui-forge) without plans to support other UIs.  
@@ -24,3 +24,4 @@ I was inspired by [this Redddit post](https://www.reddit.com/r/StableDiffusion/c
 - It only returns the keywords if author specified them in the model description.
 - It saves the keywords on disk after fetching them for the first time. 
 - If CivitAI API is down, you won't get any keywords.
+- I'm planning to add more features in the future.
