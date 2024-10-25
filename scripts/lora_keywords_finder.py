@@ -3,13 +3,16 @@ import json
 import os
 import re
 import requests
-import gradio as gr
+import gradio as gr # type: ignore
 from modules import scripts
 
 class LoraKeywordsFinder(scripts.Script):
 
     def __init__(self):
         super().__init__()
+        # Ensure the known directory exists
+        known_dir = os.path.join(scripts.basedir(), "extensions", "lora-keywords-finder", "known")
+        os.makedirs(known_dir, exist_ok=True)
 
     def title(self):
         return "LoRA Keywords Finder"
@@ -18,32 +21,31 @@ class LoraKeywordsFinder(scripts.Script):
         return scripts.AlwaysVisible
 
     def ui(self, is_img2img):
-        with gr.Group():
-            with gr.Accordion("LoRA Keywords Finder", open=False):
-                with gr.Blocks():
-                    # Add an empty choice as the default selection
-                    choices = [""] + self.list_lora_files()
-                    
-                    lora_dropdown = gr.Dropdown(
-                        show_label=False,
-                        choices=choices,
-                        value="",  # Set empty string as default value
-                        type="value"
-                    )
+        with gr.Accordion("LoRA Keywords Finder", open=False):
+            with gr.Blocks():
+                # Add an empty choice as the default selection
+                choices = [""] + self.list_lora_files()
                 
-                    trained_words_display = gr.Textbox(
-                        show_label=False,
-                        interactive=False,
-                        value="",  # Set empty string as initial value
-                        placeholder="Select a LoRA to see its keywords..."
-                    )
+                lora_dropdown = gr.Dropdown(
+                    show_label=False,
+                    choices=choices,
+                    value="",  # Set empty string as default value
+                    type="value"
+                )
 
-                    # Event handler for dropdown change
-                    lora_dropdown.change(
-                        fn=self.get_trained_words,
-                        inputs=[lora_dropdown],
-                        outputs=[trained_words_display]
-                    )
+                trained_words_display = gr.Textbox(
+                    show_label=False,
+                    interactive=False,
+                    value="",  # Set empty string as initial value
+                    placeholder="Select a LoRA to see its keywords..."
+                )
+
+                # Event handler for dropdown change
+                lora_dropdown.change(
+                    fn=self.get_trained_words,
+                    inputs=[lora_dropdown],
+                    outputs=[trained_words_display]
+                )
 
         return [lora_dropdown, trained_words_display]
 
