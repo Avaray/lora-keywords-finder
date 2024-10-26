@@ -42,6 +42,11 @@ class LoraKeywordsFinder(scripts.Script):
             
         return new_prompt
 
+    def reload_lora_list(self):
+        """Reload the list of LoRA files and return updated choices"""
+        choices = [""] + self.list_lora_files()
+        return gr.update(choices=choices, value="")
+
     def ui(self, is_img2img):
         with gr.Accordion("LoRA Keywords Finder", open=False):
             with gr.Row(variant="compact"):
