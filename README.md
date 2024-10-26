@@ -8,6 +8,9 @@ I was inspired by [this Redddit post](https://www.reddit.com/r/StableDiffusion/c
 
 ## Installation
 
+Currently, the extension is not yet available in the Extensions Browser. I submitted it, but need to wait for approval.  
+Until then, you can install it from URL.
+
 1. Open "Extensions" tab in ForgeUI.
 2. Open "Install from URL" tab.
 3. Paste the following URL: `https://github.com/Avaray/lora-keywords-finder`
