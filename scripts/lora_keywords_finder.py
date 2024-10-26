@@ -70,7 +70,7 @@ class LoraKeywordsFinder(scripts.Script):
         for filename in os.listdir(lora_dir):
             if filename.endswith((".pt", ".safetensors")):
                 lora_files.append(filename)
-        return sorted(lora_files)  # Sort the files alphabetically
+        return sorted(lora_files, key=str.lower)  # Sort the files alphabetically
 
     def reload_lora_list(self):
         """Reload the list of LoRA files and update the dropdown"""
