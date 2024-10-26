@@ -59,6 +59,8 @@ class LoraKeywordsFinder(scripts.Script):
                     outputs=[lora_dropdown]
                 )
 
+                copy_to_positive_prompt = gr.Button("⚡️", scale=0, elem_classes=["tool"])
+
         return [lora_dropdown, trained_words_display]
 
     def normalize_keyword(self, keyword):
