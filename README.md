@@ -1,5 +1,7 @@
 # 🧙‍♂️ LoRA Keywords Finder for ForgeUI
 
+![Image of extension lora-keywords-finder](/public/image_of_extension.jpg "Image of extension lora-keywords-finder")
+
 This Extension lets you find keywords for your [LoRA](https://wiki.civitai.com/wiki/Low-Rank_Adaptation) models using [CivitAI API](https://developer.civitai.com/docs/api/public-rest).  
 Created for [ForgeUI](https://github.com/lllyasviel/stable-diffusion-webui-forge) without plans to support other UIs.  
 I was inspired by [this Redddit post](https://www.reddit.com/r/StableDiffusion/comments/1gbjasv/automatic1111_and_loras_for_generation_is_there/).
