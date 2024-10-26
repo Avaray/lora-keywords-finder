@@ -5,9 +5,9 @@ import re
 import requests
 import gradio as gr # type: ignore
 from modules import scripts
+from modules import shared
 
 class LoraKeywordsFinder(scripts.Script):
-
     def __init__(self):
         super().__init__()
         # Ensure the known directory exists
@@ -19,6 +19,28 @@ class LoraKeywordsFinder(scripts.Script):
 
     def show(self, is_img2img):
         return scripts.AlwaysVisible
+
+    def copy_to_prompt(self, text, is_img2img):
+        """Copy keywords to the appropriate prompt textarea"""
+        if not text or text in ["No keywords provided for this LoRA", "Failed to fetch keywords from CivitAI API", "Error fetching keywords"]:
+            return
+        
+        # Get the current prompt
+        if is_img2img:
+            current_prompt = getattr(shared.state, 'img2img_prompt', '')
+        else:
+            current_prompt = getattr(shared.state, 'txt2img_prompt', '')
+        
+        # Append the new text with a comma if there's existing content
+        new_prompt = f"{current_prompt}, {text}" if current_prompt else text
+        
+        # Update the prompt
+        if is_img2img:
+            shared.state.img2img_prompt = new_prompt
+        else:
+            shared.state.txt2img_prompt = new_prompt
+            
+        return new_prompt
 
     def ui(self, is_img2img):
         with gr.Accordion("LoRA Keywords Finder", open=False):
@@ -46,6 +68,32 @@ class LoraKeywordsFinder(scripts.Script):
                     placeholder="Select a LoRA to see its keywords..."
                 )
 
+                copy_to_prompt = gr.Button("⚡️", scale=0, elem_classes=["tool"])
+
+                # Add JavaScript for copying to prompt with empty check
+                copy_js = """
+                function copyToPrompt(text) {
+                    // Check if text is empty or contains error messages
+                    if (!text || text === "" || 
+                        text === "No keywords provided for this LoRA" || 
+                        text === "Failed to fetch keywords from CivitAI API" || 
+                        text === "Error fetching keywords") {
+                        return text;
+                    }
+                    
+                    const textarea = document.querySelector('#txt2img_prompt textarea');
+                    if (textarea) {
+                        const currentText = textarea.value.trim();
+                        textarea.value = currentText ? `${currentText}, ${text}` : text;
+                        
+                        // Create and dispatch input event
+                        const event = new Event('input', { bubbles: true });
+                        textarea.dispatchEvent(event);
+                    }
+                    return text;
+                }
+                """
+                
                 # Event handler for dropdown change
                 lora_dropdown.change(
                     fn=self.get_trained_words,
@@ -59,7 +107,13 @@ class LoraKeywordsFinder(scripts.Script):
                     outputs=[lora_dropdown]
                 )
 
-                copy_to_positive_prompt = gr.Button("⚡️", scale=0, elem_classes=["tool"])
+                # Event handler for copy button with JavaScript
+                copy_to_prompt.click(
+                    fn=None,
+                    inputs=[trained_words_display],
+                    outputs=None,
+                    _js=copy_js
+                )
 
         return [lora_dropdown, trained_words_display]
 
@@ -75,7 +129,6 @@ class LoraKeywordsFinder(scripts.Script):
         return sorted(lora_files, key=str.lower)  # Sort the files alphabetically
 
     def reload_lora_list(self):
-        """Reload the list of LoRA files and update the dropdown"""
         choices = [""] + self.list_lora_files()
         return gr.update(choices=choices, value="")
 
@@ -112,10 +165,8 @@ class LoraKeywordsFinder(scripts.Script):
                 data = response.json()
                 words = data.get("trainedWords", [])
                 
-                # Check if words array is empty
                 if not words:
                     print(f"No keywords found for {lora_file}")
-                    # Save empty array to cache to prevent repeated API calls
                     os.makedirs(known_dir, exist_ok=True)
                     with open(json_file_path, "w") as f:
                         json.dump(words, f)
@@ -124,10 +175,8 @@ class LoraKeywordsFinder(scripts.Script):
                 words = [self.normalize_keyword(word) for word in words]
                 print(f"Fetched {len(words)} keywords for {lora_file}")
                 
-                # Ensure the known directory exists
                 os.makedirs(known_dir, exist_ok=True)
                 
-                # Save the trained words
                 with open(json_file_path, "w") as f:
                     json.dump(words, f)
                 
