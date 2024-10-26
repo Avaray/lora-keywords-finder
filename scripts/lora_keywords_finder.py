@@ -167,15 +167,12 @@ class LoraKeywordsFinder(scripts.Script):
                 
                 if not words:
                     print(f"No keywords found for {lora_file}")
-                    os.makedirs(known_dir, exist_ok=True)
                     with open(json_file_path, "w") as f:
                         json.dump(words, f)
                     return gr.update(value="No keywords provided for this LoRA")
                 
                 words = [self.normalize_keyword(word) for word in words]
                 print(f"Fetched {len(words)} keywords for {lora_file}")
-                
-                os.makedirs(known_dir, exist_ok=True)
                 
                 with open(json_file_path, "w") as f:
                     json.dump(words, f)
