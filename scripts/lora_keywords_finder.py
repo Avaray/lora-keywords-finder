@@ -122,15 +122,30 @@ class LoraKeywordsFinder(scripts.Script):
 
     def list_lora_files(self):
         lora_dir = os.path.join(scripts.basedir(), "..", "..", "models", "Lora")
-        lora_files = []
-        for filename in os.listdir(lora_dir):
-            if filename.endswith((".pt", ".safetensors")):
-                lora_files.append(filename)
-        return sorted(lora_files, key=str.lower)  # Sort the files alphabetically
-
-    def reload_lora_list(self):
-        choices = [""] + self.list_lora_files()
-        return gr.update(choices=choices, value="")
+        root_files = []
+        subdir_files = []
+        
+        # Walk through directory and subdirectories
+        for root, _, files in os.walk(lora_dir):
+            for filename in files:
+                if filename.endswith((".pt", ".safetensors")):
+                    # Get the relative path from the lora_dir
+                    rel_path = os.path.relpath(root, lora_dir)
+                    if rel_path == ".":
+                        # File is in root directory
+                        root_files.append(filename)
+                    else:
+                        # File is in subdirectory
+                        subdir_files.append(os.path.join(rel_path, filename))
+        
+        # Sort root files alphabetically (case-insensitive)
+        root_files.sort(key=str.lower)
+        
+        # Sort subdirectory files by path (case-insensitive)
+        subdir_files.sort(key=lambda x: tuple(part.lower() for part in os.path.normpath(x).split(os.sep)))
+        
+        # Combine root files and subdirectory files
+        return root_files + subdir_files
 
     def get_trained_words(self, lora_file):
         # Return empty string if no file is selected or empty string is selected
@@ -138,8 +153,18 @@ class LoraKeywordsFinder(scripts.Script):
             return gr.update(value="")
 
         lora_dir = os.path.join(scripts.basedir(), "..", "..", "models", "Lora")
-        with open(os.path.join(lora_dir, lora_file), "rb") as f:
-            file_hash = hashlib.sha256(f.read()).hexdigest()
+        # Construct full path using os.path.join to handle subdirectories correctly
+        full_path = os.path.join(lora_dir, lora_file)
+        
+        try:
+            with open(full_path, "rb") as f:
+                file_hash = hashlib.sha256(f.read()).hexdigest()
+        except FileNotFoundError:
+            print(f"File not found: {full_path}")
+            return gr.update(value="Error: File not found")
+        except Exception as e:
+            print(f"Error reading file {full_path}: {e}")
+            return gr.update(value="Error reading file")
 
         print(f"Selected {lora_file}, file hash: {file_hash}")
 
