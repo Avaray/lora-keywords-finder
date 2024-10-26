@@ -33,7 +33,7 @@ class LoraKeywordsFinder(scripts.Script):
                     type="value"
                 )
 
-                reload_loras = gr.Button("🔄", scale=0, value="Reload list", elem_classes=["tool"])
+                reload_loras = gr.Button("🔄", scale=0, elem_classes=["tool"])
 
             # Add gap between rows
             gr.HTML("<div style='height: 8px'></div>")
