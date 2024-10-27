@@ -1,7 +1,7 @@
-import hashlib
-import json
 import os
 import re
+import json
+import hashlib
 import requests
 import gradio as gr # type: ignore
 from modules import scripts
@@ -42,6 +42,10 @@ class LoraKeywordsFinder(scripts.Script):
             
         return new_prompt
 
+    def reload_lora_list(self):
+        choices = [""] + self.list_lora_files()
+        return gr.update(choices=choices, value="")
+
     def ui(self, is_img2img):
         with gr.Accordion("LoRA Keywords Finder", open=False):
             with gr.Row(variant="compact"):
@@ -70,7 +74,7 @@ class LoraKeywordsFinder(scripts.Script):
 
                 copy_to_prompt = gr.Button("⚡️", scale=0, elem_classes=["tool"])
 
-                # Add JavaScript for copying to prompt with empty check
+                # JavaScript for copying to prompt with empty check
                 copy_js = """
                 function copyToPrompt(text) {
                     // Check if text is empty or contains error messages
