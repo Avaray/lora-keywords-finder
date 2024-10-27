@@ -21,7 +21,6 @@ class LoraKeywordsFinder(scripts.Script):
         return scripts.AlwaysVisible
 
     def copy_to_prompt(self, text, is_img2img):
-        """Copy keywords to the appropriate prompt textarea"""
         if not text or text in ["No keywords provided for this LoRA", "Failed to fetch keywords from CivitAI API", "Error fetching keywords"]:
             return
         
@@ -74,7 +73,7 @@ class LoraKeywordsFinder(scripts.Script):
 
                 copy_to_prompt = gr.Button("⚡️", scale=0, elem_classes=["tool"])
 
-                # JavaScript for copying to prompt with empty check
+                # JavaScript code to copy the selected text to the prompt
                 copy_js = """
                 function copyToPrompt(text) {
                     // Check if text is empty or contains error messages
@@ -85,7 +84,29 @@ class LoraKeywordsFinder(scripts.Script):
                         return text;
                     }
                     
-                    const textarea = document.querySelector('#txt2img_prompt textarea');
+                    // Find which tab is currently selected
+                    const tabs = document.querySelector('#tabs')?.querySelector('div');
+                    if (!tabs) return text;
+                    
+                    // Get all tab buttons
+                    const tabButtons = tabs.querySelectorAll('button');
+                    let activeTabIndex = -1;
+                    
+                    // Find which tab is active
+                    tabButtons.forEach((button, index) => {
+                        if (button.classList.contains('selected')) {
+                            activeTabIndex = index;
+                        }
+                    });
+                    
+                    // Select the appropriate textarea based on active tab
+                    let textarea;
+                    if (activeTabIndex === 0) {
+                        textarea = document.querySelector('#txt2img_prompt textarea');
+                    } else if (activeTabIndex === 1) {
+                        textarea = document.querySelector('#img2img_prompt textarea');
+                    }
+                    
                     if (textarea) {
                         const currentText = textarea.value.trim();
                         textarea.value = currentText ? `${currentText}, ${text}` : text;
@@ -93,6 +114,10 @@ class LoraKeywordsFinder(scripts.Script):
                         // Create and dispatch input event
                         const event = new Event('input', { bubbles: true });
                         textarea.dispatchEvent(event);
+                        
+                        // If using gradio's version below 3.29, you might need to trigger a change event as well
+                        const changeEvent = new Event('change', { bubbles: true });
+                        textarea.dispatchEvent(changeEvent);
                     }
                     return text;
                 }
