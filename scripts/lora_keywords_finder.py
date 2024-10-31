@@ -3,9 +3,10 @@ import re
 import json
 import hashlib
 import requests
-import gradio as gr # type: ignore
+import gradio as gr  # type: ignore
 from modules import scripts
 from modules import shared
+
 
 class LoraKeywordsFinder(scripts.Script):
     def __init__(self):
@@ -150,7 +151,7 @@ class LoraKeywordsFinder(scripts.Script):
         return re.sub(r",(?=[^\s])", ", ", keyword).strip()
 
     def list_lora_files(self):
-        lora_dir = os.path.join(scripts.basedir(), "..", "..", "models", "Lora")
+        lora_dir = shared.cmd_opts.lora_dir
         root_files = []
         subdir_files = []
         
@@ -181,9 +182,8 @@ class LoraKeywordsFinder(scripts.Script):
         if not lora_file:
             return gr.update(value="")
 
-        lora_dir = os.path.join(scripts.basedir(), "..", "..", "models", "Lora")
         # Construct full path using os.path.join to handle subdirectories correctly
-        full_path = os.path.join(lora_dir, lora_file)
+        full_path = os.path.join(shared.cmd_opts.lora_dir, lora_file)
         
         try:
             with open(full_path, "rb") as f:
