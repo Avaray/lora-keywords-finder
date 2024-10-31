@@ -7,13 +7,13 @@ import gradio as gr  # type: ignore
 from modules import scripts
 from modules import shared
 
+known_dir = os.path.join(scripts.basedir(), "known")
+os.makedirs(known_dir, exist_ok=True)
+
 
 class LoraKeywordsFinder(scripts.Script):
     def __init__(self):
         super().__init__()
-        # Ensure the known directory exists
-        known_dir = os.path.join(scripts.basedir(), "extensions", "lora-keywords-finder", "known")
-        os.makedirs(known_dir, exist_ok=True)
 
     def title(self):
         return "LoRA Keywords Finder"
@@ -51,7 +51,7 @@ class LoraKeywordsFinder(scripts.Script):
             with gr.Row(variant="compact"):
                 # Add an empty choice as the default selection
                 choices = [""] + self.list_lora_files()
-                
+
                 lora_dropdown = gr.Dropdown(
                     show_label=False,
                     choices=choices,
@@ -123,7 +123,7 @@ class LoraKeywordsFinder(scripts.Script):
                     return text;
                 }
                 """
-                
+
                 # Event handler for dropdown change
                 lora_dropdown.change(
                     fn=self.get_trained_words,
@@ -197,7 +197,6 @@ class LoraKeywordsFinder(scripts.Script):
 
         print(f"Selected {lora_file}, file hash: {file_hash}")
 
-        known_dir = os.path.join(scripts.basedir(), "extensions", "lora-keywords-finder", "known")
         json_file_path = os.path.join(known_dir, f"{file_hash}.json")
 
         # Check if the JSON file exists
