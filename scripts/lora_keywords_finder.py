@@ -158,7 +158,7 @@ class LoraKeywordsFinder(scripts.Script):
         # Walk through directory and subdirectories
         for root, _, files in os.walk(lora_dir):
             for filename in files:
-                if filename.endswith((".pt", ".safetensors")):
+                if filename.lower().endswith((".pt", ".safetensors")):
                     # Get the relative path from the lora_dir
                     rel_path = os.path.relpath(root, lora_dir)
                     if rel_path == ".":
