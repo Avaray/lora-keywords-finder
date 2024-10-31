@@ -3,16 +3,17 @@ import re
 import json
 import hashlib
 import requests
-import gradio as gr # type: ignore
+import gradio as gr  # type: ignore
 from modules import scripts
 from modules import shared
+
+known_dir = os.path.join(scripts.basedir(), "known")
+os.makedirs(known_dir, exist_ok=True)
+
 
 class LoraKeywordsFinder(scripts.Script):
     def __init__(self):
         super().__init__()
-        # Ensure the known directory exists
-        known_dir = os.path.join(scripts.basedir(), "extensions", "lora-keywords-finder", "known")
-        os.makedirs(known_dir, exist_ok=True)
 
     def title(self):
         return "LoRA Keywords Finder"
@@ -50,7 +51,7 @@ class LoraKeywordsFinder(scripts.Script):
             with gr.Row(variant="compact"):
                 # Add an empty choice as the default selection
                 choices = [""] + self.list_lora_files()
-                
+
                 lora_dropdown = gr.Dropdown(
                     show_label=False,
                     choices=choices,
@@ -122,7 +123,7 @@ class LoraKeywordsFinder(scripts.Script):
                     return text;
                 }
                 """
-                
+
                 # Event handler for dropdown change
                 lora_dropdown.change(
                     fn=self.get_trained_words,
@@ -150,14 +151,14 @@ class LoraKeywordsFinder(scripts.Script):
         return re.sub(r",(?=[^\s])", ", ", keyword).strip()
 
     def list_lora_files(self):
-        lora_dir = os.path.join(scripts.basedir(), "..", "..", "models", "Lora")
+        lora_dir = shared.cmd_opts.lora_dir
         root_files = []
         subdir_files = []
         
         # Walk through directory and subdirectories
         for root, _, files in os.walk(lora_dir):
             for filename in files:
-                if filename.endswith((".pt", ".safetensors")):
+                if filename.lower().endswith((".pt", ".safetensors")):
                     # Get the relative path from the lora_dir
                     rel_path = os.path.relpath(root, lora_dir)
                     if rel_path == ".":
@@ -181,9 +182,8 @@ class LoraKeywordsFinder(scripts.Script):
         if not lora_file:
             return gr.update(value="")
 
-        lora_dir = os.path.join(scripts.basedir(), "..", "..", "models", "Lora")
         # Construct full path using os.path.join to handle subdirectories correctly
-        full_path = os.path.join(lora_dir, lora_file)
+        full_path = os.path.join(shared.cmd_opts.lora_dir, lora_file)
         
         try:
             with open(full_path, "rb") as f:
@@ -197,7 +197,6 @@ class LoraKeywordsFinder(scripts.Script):
 
         print(f"Selected {lora_file}, file hash: {file_hash}")
 
-        known_dir = os.path.join(scripts.basedir(), "extensions", "lora-keywords-finder", "known")
         json_file_path = os.path.join(known_dir, f"{file_hash}.json")
 
         # Check if the JSON file exists
