@@ -7,10 +7,18 @@ Primarily created for [ForgeUI](https://github.com/lllyasviel/stable-diffusion-w
 
 ## Installation
 
-Currently, the extension is not yet available in the Extensions Browser. I submitted it, but need to wait for approval.  
-Until then, you can install it from URL.
+### From Extensions List
 
-1. Open "Extensions" tab in ForgeUI.
+1. Open "Extensions" tab.
+2. Open "Available" tab.
+3. Click "Load from" button.
+4. Find "LoRA Keywords Finder" in the list.
+5. Click "Install" button.
+6. When the installation is done, reload UI.
+
+### From URL
+
+1. Open "Extensions" tab.
 2. Open "Install from URL" tab.
 3. Paste the following URL: `https://github.com/Avaray/lora-keywords-finder`
 4. Click "Install" button.
