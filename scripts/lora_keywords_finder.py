@@ -203,7 +203,8 @@ class LoraKeywordsFinder(scripts.Script):
         if os.path.exists(json_file_path):
             # Load trained words from the JSON file
             with open(json_file_path, "r") as f:
-                words = json.load(f)
+                words = json.load(f) or []
+            words = [w for w in words if w.strip()]
             print(f"Found cached keywords for {lora_file}: {words}")
             if not words:  # If cached words array is empty
                 return gr.update(value="No keywords provided for this LoRA")
@@ -216,7 +217,8 @@ class LoraKeywordsFinder(scripts.Script):
             response = requests.get(api_url)
             if response.status_code == 200:
                 data = response.json()
-                words = data.get("trainedWords", [])
+                words = data.get("trainedWords") or []
+                words = [w for w in words if w.strip()]
                 
                 if not words:
                     print(f"No keywords found for {lora_file}")
