@@ -219,7 +219,7 @@ class LoraKeywordsFinder(scripts.Script):
         return {}
 
     
-    def _fetch_community_images(self, version_id: str) -> list:
+    def _fetch_community_images(self, version_id: str) -> tuple:
         import requests
         try:
             resp = requests.get(
@@ -227,7 +227,9 @@ class LoraKeywordsFinder(scripts.Script):
                 timeout=5
             )
             if resp.status_code == 200:
-                items = resp.json().get("items", [])
+                data = resp.json()
+                items = data.get("items", [])
+                next_page = data.get("metadata", {}).get("nextPage", "")
                 valid_images = []
                 for item in items:
                     meta = item.get("meta")
@@ -237,12 +239,13 @@ class LoraKeywordsFinder(scripts.Script):
                             "prompt": meta.get("prompt", ""),
                             "negativePrompt": meta.get("negativePrompt", "")
                         })
-                    if len(valid_images) >= 21: # Keep 21
+                    # We can keep more than 21 since JS handles it, but 21 is a good start.
+                    if len(valid_images) >= 21:
                         break
-                return valid_images
+                return valid_images, next_page
         except Exception as e:
             print(f"[LoRA Keywords] Error fetching community images: {e}")
-        return []
+        return [], "" 
 
     def _fetch_batch_chunk(self, chunk: list) -> tuple:
         """
@@ -276,9 +279,13 @@ class LoraKeywordsFinder(scripts.Script):
 
     def _entry_to_ui(self, entry: dict, file_hash: str, show_images: bool = True, gallery_mode: str = "Official"):
         images = []
+        next_page_attr = ""
         if show_images:
             if gallery_mode == "Community" and entry.get("version_id"):
-                images = self._fetch_community_images(entry.get("version_id"))
+                images, next_page = self._fetch_community_images(entry.get("version_id"))
+                if next_page:
+                    import urllib.parse
+                    next_page_attr = f' data-next-page="{next_page.replace('"', '&quot;')}"'
             
             if not images: # Fallback or Official mode
                 images = entry.get("images", [])
@@ -316,7 +323,7 @@ class LoraKeywordsFinder(scripts.Script):
                 arrows_html = '<div class="lkf-carousel-nav left-arrow">◀</div><div class="lkf-carousel-nav right-arrow">▶</div>'
                 
             mode_label = "Community Images (Popular)" if gallery_mode == "Community" else "Official Example Images"
-            html_content = f'<span style="display: block; font-size: 14px; font-weight: 500;">{mode_label}</span><div class="lkf-carousel-container" data-current-index="0">{img_tags}{arrows_html}</div>'
+            html_content = f'<span style="display: block; font-size: 14px; font-weight: 500;">{mode_label}</span><div class="lkf-carousel-container" data-current-index="0"{next_page_attr}>{img_tags}{arrows_html}</div>'
             gallery_update = gr.update(value=html_content, visible=True)
         else:
             gallery_update = gr.update(value="", visible=False)

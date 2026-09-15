@@ -13,12 +13,60 @@ document.addEventListener("click", function(e) {
         
         const maxIndex = slides.length - 3;
         
+        const isFetching = container.getAttribute("data-fetching") === "true";
         if (prevBtn) {
             currentIndex = currentIndex - 1;
             if (currentIndex < 0) currentIndex = maxIndex;
         } else if (nextBtn) {
+            if (currentIndex === maxIndex && isFetching) {
+                return; // Block wrapping if we are actively downloading the next page
+            }
             currentIndex = currentIndex + 1;
             if (currentIndex > maxIndex) currentIndex = 0;
+        }
+        
+        // Trigger background fetch if we are approaching the end
+        if (currentIndex >= maxIndex - 6 && !isFetching) {
+            const nextPageUrl = container.getAttribute("data-next-page");
+            if (nextPageUrl) {
+                container.setAttribute("data-fetching", "true");
+                console.log("LKF: Pre-fetching next page of community images...");
+                
+                fetch(nextPageUrl)
+                    .then(res => res.json())
+                    .then(data => {
+                        const items = data.items || [];
+                        const meta = data.metadata || {};
+                        let newHtml = "";
+                        
+                        items.forEach(item => {
+                            const m = item.meta;
+                            if (m && m.prompt) {
+                                const url = item.url || "";
+                                const pos = encodeURIComponent(m.prompt || "");
+                                const neg = encodeURIComponent(m.negativePrompt || "");
+                                
+                                const btnHtml = `<div class="lkf-img-prompt-btn" data-pos="${pos}" data-neg="${neg}" title="Send prompts to UI">📝</div>`;
+                                newHtml += `<div class="lkf-carousel-slide"><div class="lkf-img-wrapper"><a href="${url}" target="_blank"><img src="${url}"/></a>${btnHtml}</div></div>`;
+                            }
+                        });
+                        
+                        if (newHtml) {
+                            const rBtn = container.querySelector(".right-arrow");
+                            if (rBtn) rBtn.insertAdjacentHTML('beforebegin', newHtml);
+                        }
+                        
+                        if (meta.nextPage) {
+                            container.setAttribute("data-next-page", meta.nextPage);
+                        } else {
+                            container.removeAttribute("data-next-page");
+                        }
+                    })
+                    .catch(err => console.error("LKF Fetch Error:", err))
+                    .finally(() => {
+                        container.setAttribute("data-fetching", "false");
+                    });
+            }
         }
         
         container.setAttribute("data-current-index", currentIndex.toString());
