@@ -223,7 +223,7 @@ class LoraKeywordsFinder(scripts.Script):
         import requests
         try:
             resp = requests.get(
-                f"https://civitai.com/api/v1/images?modelVersionId={version_id}&sort=Most%20Reactions&period=AllTime&limit=100",
+                f"https://civitai.com/api/v1/images?modelVersionId={version_id}&sort=Most%20Reactions&period=AllTime&limit=100&withMeta=true",
                 timeout=5
             )
             if resp.status_code == 200:

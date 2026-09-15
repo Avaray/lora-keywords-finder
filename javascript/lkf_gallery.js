@@ -27,8 +27,12 @@ document.addEventListener("click", function(e) {
         
         // Trigger background fetch if we are approaching the end
         if (currentIndex >= maxIndex - 6 && !isFetching) {
-            const nextPageUrl = container.getAttribute("data-next-page");
+            let nextPageUrl = container.getAttribute("data-next-page");
             if (nextPageUrl) {
+                // Ensure withMeta=true is always present so CivitAI returns prompt data
+                if (!nextPageUrl.includes("withMeta=true")) {
+                    nextPageUrl += (nextPageUrl.includes("?") ? "&" : "?") + "withMeta=true";
+                }
                 container.setAttribute("data-fetching", "true");
                 console.log("LKF: Pre-fetching next page of community images...");
                 
@@ -71,12 +75,8 @@ document.addEventListener("click", function(e) {
         
         container.setAttribute("data-current-index", currentIndex.toString());
         
-        // Update slide visibility
+        // Update slide visibility: show 3 slides at a time starting at currentIndex
         slides.forEach((slide, idx) => {
-            // Because it's an infinite loop without cloning nodes, we just wrap around visually by showing the right slides
-            // Actually, wait, if currentIndex + 3 exceeds the total, we need to wrap the visible slides around too!
-            // Wait, does it? If currentIndex = maxIndex, currentIndex + 3 is the exact length, so it's perfectly safe.
-            // maxIndex is slides.length - 3. So currentIndex + 3 is slides.length. It never goes out of bounds.
             if (idx >= currentIndex && idx < currentIndex + 3) {
                 slide.classList.add("lkf-visible");
             } else {
@@ -84,7 +84,7 @@ document.addEventListener("click", function(e) {
             }
         });
         
-        // Keep both arrows visible for infinite carousel
+        // Keep both arrows always visible for infinite carousel
         const lBtn = container.querySelector(".left-arrow");
         const rBtn = container.querySelector(".right-arrow");
         if (lBtn) lBtn.style.display = "block";
