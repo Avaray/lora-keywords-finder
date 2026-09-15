@@ -323,7 +323,8 @@ class LoraKeywordsFinder(scripts.Script):
                 arrows_html = '<div class="lkf-carousel-nav left-arrow">◀</div><div class="lkf-carousel-nav right-arrow">▶</div>'
                 
             mode_label = "Community Images (Popular)" if gallery_mode == "Community" else "Official Example Images"
-            html_content = f'<span style="display: block; font-size: 14px; font-weight: 500;">{mode_label}</span><div class="lkf-carousel-container" data-current-index="0"{next_page_attr}>{img_tags}{arrows_html}</div>'
+            mode_attr = 'data-mode="community"' if gallery_mode == "Community" else ''
+            html_content = f'<span style="display: block; font-size: 14px; font-weight: 500;">{mode_label}</span><div class="lkf-carousel-container" data-current-index="0" {mode_attr}{next_page_attr}>{img_tags}{arrows_html}</div>'
             gallery_update = gr.update(value=html_content, visible=True)
         else:
             gallery_update = gr.update(value="", visible=False)

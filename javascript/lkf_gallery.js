@@ -12,21 +12,31 @@ document.addEventListener("click", function(e) {
         if (slides.length <= 3) return; // No need to slide
         
         const maxIndex = slides.length - 3;
-        
         const isFetching = container.getAttribute("data-fetching") === "true";
+        const isExhausted = container.getAttribute("data-exhausted") === "true";
+        const isCommunity = container.getAttribute("data-mode") === "community";
+
         if (prevBtn) {
+            // Left: freely go back through history, wrap from 0 to end
             currentIndex = currentIndex - 1;
             if (currentIndex < 0) currentIndex = maxIndex;
+
         } else if (nextBtn) {
-            if (currentIndex === maxIndex && isFetching) {
-                return; // Block wrapping if we are actively downloading the next page
+            if (currentIndex >= maxIndex) {
+                if (isCommunity && !isExhausted) {
+                    // More pages are being fetched — stay put, don't show duplicates
+                    return;
+                } else {
+                    // Truly exhausted (or official mode) — loop from beginning
+                    currentIndex = 0;
+                }
+            } else {
+                currentIndex = currentIndex + 1;
             }
-            currentIndex = currentIndex + 1;
-            if (currentIndex > maxIndex) currentIndex = 0;
         }
         
-        // Trigger background fetch if we are approaching the end
-        if (currentIndex >= maxIndex - 6 && !isFetching) {
+        // Trigger background fetch when approaching end (community mode only)
+        if (isCommunity && currentIndex >= maxIndex - 6 && !isFetching && !isExhausted) {
             let nextPageUrl = container.getAttribute("data-next-page");
             if (nextPageUrl) {
                 // Ensure withMeta=true is always present so CivitAI returns prompt data
@@ -42,6 +52,7 @@ document.addEventListener("click", function(e) {
                         const items = data.items || [];
                         const meta = data.metadata || {};
                         let newHtml = "";
+                        let added = 0;
                         
                         items.forEach(item => {
                             const m = item.meta;
@@ -49,27 +60,34 @@ document.addEventListener("click", function(e) {
                                 const url = item.url || "";
                                 const pos = encodeURIComponent(m.prompt || "");
                                 const neg = encodeURIComponent(m.negativePrompt || "");
-                                
                                 const btnHtml = `<div class="lkf-img-prompt-btn" data-pos="${pos}" data-neg="${neg}" title="Send prompts to UI">📝</div>`;
                                 newHtml += `<div class="lkf-carousel-slide"><div class="lkf-img-wrapper"><a href="${url}" target="_blank"><img src="${url}"/></a>${btnHtml}</div></div>`;
+                                added++;
                             }
                         });
                         
                         if (newHtml) {
                             const rBtn = container.querySelector(".right-arrow");
                             if (rBtn) rBtn.insertAdjacentHTML('beforebegin', newHtml);
+                            console.log(`LKF: Added ${added} new community images.`);
                         }
                         
                         if (meta.nextPage) {
                             container.setAttribute("data-next-page", meta.nextPage);
                         } else {
+                            // No more pages from API — mark exhausted, will loop on next end-hit
                             container.removeAttribute("data-next-page");
+                            container.setAttribute("data-exhausted", "true");
+                            console.log("LKF: All community images fetched. Will loop from beginning on next wrap.");
                         }
                     })
                     .catch(err => console.error("LKF Fetch Error:", err))
                     .finally(() => {
                         container.setAttribute("data-fetching", "false");
                     });
+            } else if (!isExhausted) {
+                // No nextPage stored yet and not marked exhausted — mark now
+                container.setAttribute("data-exhausted", "true");
             }
         }
         
@@ -84,7 +102,7 @@ document.addEventListener("click", function(e) {
             }
         });
         
-        // Keep both arrows always visible for infinite carousel
+        // Keep both arrows always visible
         const lBtn = container.querySelector(".left-arrow");
         const rBtn = container.querySelector(".right-arrow");
         if (lBtn) lBtn.style.display = "block";
@@ -106,22 +124,18 @@ document.addEventListener("click", function(e) {
         return;
     }
     
-    // Niezawodne poszukiwanie okien promptów we wszystkich dostepnych formach
     const gradioApp = typeof window.gradioApp === 'function' ? window.gradioApp() : document;
     
-    // Pobierzmy wszystkie pola textarea dla promptow w calym webui
     const allPos = gradioApp.querySelectorAll('#txt2img_prompt textarea, #img2img_prompt textarea');
     const allNeg = gradioApp.querySelectorAll('#txt2img_neg_prompt textarea, #img2img_neg_prompt textarea');
     
     if (allPos.length === 0 && allNeg.length === 0) {
-        console.error("LKF ERROR: Could not find any prompt textareas in the UI! Ensure IDs are #txt2img_prompt / #img2img_prompt.");
+        console.error("LKF ERROR: Could not find any prompt textareas in the UI!");
         alert("LKF Error: Could not locate prompt textareas in this WebUI version.");
         return;
     }
 
     let confirmOverwrite = true;
-    
-    // Sprawdzmy, czy którekolwiek z widocznych pol jest juz zapelnione (żeby zapytać o zgode)
     let hasExistingText = false;
     [...allPos, ...allNeg].forEach(el => {
         if (el && el.offsetParent !== null && el.value.trim() !== "") {
@@ -135,9 +149,8 @@ document.addEventListener("click", function(e) {
     
     if (confirmOverwrite) {
         let updatedCount = 0;
-        // Aktualizujemy tylko widoczne (aktywne) pola tekstowe
         allPos.forEach(posTextarea => {
-            if (posTextarea.offsetParent !== null) { // sprawdzanie czy widoczne na ekranie (aktywny tab)
+            if (posTextarea.offsetParent !== null) {
                 posTextarea.value = pos;
                 posTextarea.dispatchEvent(new Event('input', { bubbles: true }));
                 posTextarea.dispatchEvent(new Event('change', { bubbles: true }));
