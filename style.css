@@ -1,0 +1,16 @@
+/* LKF Extension Styles - Native Forge Loading */
+#lkf_lora_dropdown .wrap-inner { padding: 10px !important; }
+#lkf_lora_dropdown .wrap-inner input { margin: 0 !important; }
+
+.lkf-custom-gallery { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: flex-start !important; gap: 8px !important; width: 100% !important; box-sizing: border-box !important; margin-top: 8px !important; }
+.lkf-custom-gallery img { width: 100% !important; height: 250px !important; object-fit: cover !important; display: block !important; }
+
+.lkf-img-wrapper { position: relative !important; flex: 1 1 0 !important; max-width: 33.33% !important; overflow: hidden !important; border-radius: 0.5em !important; }
+.lkf-img-wrapper a { display: block !important; width: 100% !important; height: 100% !important; overflow: hidden !important; border-radius: 0.5em !important; }
+
+.lkf-img-prompt-btn { position: absolute !important; top: 6px !important; right: 6px !important; background: rgba(0,0,0,0.6) !important; color: white !important; border: none !important; border-radius: 4px !important; padding: 4px 8px !important; cursor: pointer !important; font-size: 16px !important; z-index: 10 !important; transition: background 0.2s !important; }
+.lkf-img-prompt-btn:hover { background: rgba(0,0,0,0.9) !important; }
+
+.lkf-base-model-row { gap: 1em !important; }
+.lkf-margin-cb { margin-bottom: 12px !important; }
+.lkf-hidden-bridge { display: none !important; height: 0 !important; overflow: hidden !important; border: none !important; padding: 0 !important; margin: 0 !important; }

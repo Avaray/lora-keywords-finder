@@ -731,9 +731,7 @@ class LoraKeywordsFinder(scripts.Script):
                         value=load_config().get("show_advanced", True),
                         elem_classes=["lkf-margin-cb"],
                     )
-                gr.HTML(
-                    "<style>.lkf-margin-cb { margin-bottom: 12px !important; }</style>"
-                )
+
                 with gr.Row():
                     clear_cache_btn = gr.Button("🗑️ Clear Cache", variant="secondary")
                     fetch_all_btn = gr.Button(
