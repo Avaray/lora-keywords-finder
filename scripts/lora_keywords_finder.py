@@ -189,7 +189,12 @@ class LoraKeywordsFinder(scripts.Script):
 
     def _entry_to_ui(self, entry: dict, file_hash: str):
         images = entry.get("images", [])
-        gallery_update = gr.update(value=images, visible=bool(images))
+        if images:
+            img_tags = "".join([f'<a href="{url}" target="_blank"><img src="{url}"/></a>' for url in images])
+            html_content = f'<div class="lkf-custom-gallery">{img_tags}</div>'
+            gallery_update = gr.update(value=html_content, visible=True)
+        else:
+            gallery_update = gr.update(value="", visible=False)
         """
         Convert a cache dict to UI gr.update objects.
         Returns: (kw, name, hash, url,
@@ -567,16 +572,7 @@ class LoraKeywordsFinder(scripts.Script):
             gr.HTML("<div style='height: 8px'></div>")
 
             # ── Row 6: Image Gallery ─────────────────────────────────────────
-            images_gallery = gr.Gallery(
-                label="Preview Images",
-                show_label=False,
-                interactive=False,
-                columns=3,
-                rows=1,
-                height="auto",
-                object_fit="contain",
-                visible=False,
-            )
+            images_gallery = gr.HTML(visible=False)
 
             gr.HTML("<div style='height: 8px'></div>")
 
