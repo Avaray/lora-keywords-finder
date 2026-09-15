@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.1.0 - 2026-09-15
+
+### Added
+- **Example Images Preview** — extracts and caches up to 3 image URLs from the CivitAI API payload, displaying them as a clean, responsive horizontal strip directly in the UI. 
+- The image preview handles varying aspect ratios perfectly using a fixed height (`250px`) and `object-fit: cover`.
+- Image previews are clickable, allowing users to open the full uncropped original image in a new browser tab.
+- Support for additional LoRA file extensions: `.ckpt`, `.gguf`, `.onnx`, `.pkl`, and `.pth` (in addition to `.pt` and `.safetensors`).
+
+### Changed
+- The Advanced Options buttons (`Clear Cache` and `Fetch All Metadata`) now have rounded corners (`border-radius: 0.5em`) to match the style of action buttons in the UI.
+- Replaced the default Gradio `gr.Gallery` component with a highly customized HTML/CSS implementation for a much cleaner and more integrated look.
 ## 2.0.0 - 2026-09-15
 
 ### Added
