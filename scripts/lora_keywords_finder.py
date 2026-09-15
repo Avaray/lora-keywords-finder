@@ -151,11 +151,14 @@ class LoraKeywordsFinder(scripts.Script):
             return result
         return {}
 
-    def _fetch_batch_chunk(self, chunk: list) -> dict:
+    def _fetch_batch_chunk(self, chunk: list) -> tuple:
         """
         POST up to 100 hashes to the batch endpoint.
         Retries once after 1 s on failure.
-        Returns {lowercase_hash: api_object} for matched hashes only.
+        Returns (True, {lowercase_hash: api_object}) on HTTP 200,
+        or (False, {}) when both attempts fail.
+        An empty result_map with success=True means none of the hashes
+        were found on CivitAI (not an error).
         """
         for attempt in range(2):
             try:
@@ -165,7 +168,7 @@ class LoraKeywordsFinder(scripts.Script):
                     timeout=30,
                 )
                 if resp.status_code == 200:
-                    return self._parse_batch_response(resp.json())
+                    return True, self._parse_batch_response(resp.json())
                 print(
                     f"[LoRA Keywords] Batch attempt {attempt + 1} failed:"
                     f" HTTP {resp.status_code}"
@@ -174,32 +177,51 @@ class LoraKeywordsFinder(scripts.Script):
                 print(f"[LoRA Keywords] Batch attempt {attempt + 1} exception: {e}")
             if attempt == 0:
                 time.sleep(1)
-        return {}
+        return False, {}
 
     # ── UI action handlers ─────────────────────────────────────────────────────
 
     def _entry_to_ui(self, entry: dict, file_hash: str):
-        """Convert a cache dict to the three UI output gr.update objects."""
+        """
+        Convert a cache dict to UI gr.update objects.
+        Returns: (kw, hash, url, copy_kw_btn, copy_hash_btn, copy_url_btn,
+                  copy_to_prompt_btn, open_url_btn)
+        """
         if entry.get("not_found"):
-            kw_str = MSG_NOT_ON_CIVITAI
+            kw_str      = MSG_NOT_ON_CIVITAI
+            kw_has_data = False
         else:
-            words  = entry.get("keywords") or []
-            kw_str = ", ".join(words) if words else MSG_NO_KEYWORDS
+            words       = entry.get("keywords") or []
+            kw_str      = ", ".join(words) if words else MSG_NO_KEYWORDS
+            kw_has_data = bool(words)
 
-        url_str = entry.get("model_url") or MSG_NO_URL
+        url_str      = entry.get("model_url") or MSG_NO_URL
+        url_has_data = bool(entry.get("model_url"))
+
         return (
             gr.update(value=kw_str),
             gr.update(value=file_hash),
             gr.update(value=url_str),
+            gr.update(interactive=kw_has_data),   # copy_kw_btn
+            gr.update(interactive=True),           # copy_hash_btn (hash always present)
+            gr.update(interactive=url_has_data),   # copy_url_btn
+            gr.update(interactive=kw_has_data),    # copy_to_prompt_btn
+            gr.update(interactive=url_has_data),   # open_url_btn
         )
+
+    def _all_buttons_disabled(self):
+        """Return disabled gr.updates for all 5 interactive buttons."""
+        return tuple(gr.update(interactive=False) for _ in range(5))
 
     def reload_lora_list(self):
         choices = [""] + self._list_lora_files()
         return gr.update(choices=choices, value="")
 
     def get_trained_words(self, lora_file):
-        """Returns (keywords_update, hash_update, url_update)."""
-        empty = (gr.update(value=""), gr.update(value=""), gr.update(value=""))
+        """Returns (kw, hash, url, copy_kw_btn, copy_hash_btn, copy_url_btn,
+                    copy_to_prompt_btn, open_url_btn)."""
+        empty = (gr.update(value=""), gr.update(value=""), gr.update(value=""),
+                 *self._all_buttons_disabled())
         if not lora_file:
             return empty
 
@@ -208,10 +230,14 @@ class LoraKeywordsFinder(scripts.Script):
             file_hash = self._hash_file(full_path)
         except FileNotFoundError:
             print(f"[LoRA Keywords] File not found: {full_path}")
-            return (gr.update(value="Error: File not found"), gr.update(value=""), gr.update(value=""))
+            return (gr.update(value="Error: File not found"),
+                    gr.update(value=""), gr.update(value=""),
+                    *self._all_buttons_disabled())
         except Exception as e:
             print(f"[LoRA Keywords] Error hashing {full_path}: {e}")
-            return (gr.update(value="Error reading file"), gr.update(value=""), gr.update(value=""))
+            return (gr.update(value="Error reading file"),
+                    gr.update(value=""), gr.update(value=""),
+                    *self._all_buttons_disabled())
 
         print(f"[LoRA Keywords] Selected '{lora_file}', hash: {file_hash}")
 
@@ -234,6 +260,7 @@ class LoraKeywordsFinder(scripts.Script):
                 gr.update(value=msg),
                 gr.update(value=file_hash),
                 gr.update(value=""),
+                *self._all_buttons_disabled(),
             )
 
     def clear_cache(self):
@@ -304,21 +331,32 @@ class LoraKeywordsFinder(scripts.Script):
                 f" ({len(chunk)} hashes) — fetching…"
             )
 
-            result_map = self._fetch_batch_chunk(chunk)
+            batch_ok, result_map = self._fetch_batch_chunk(chunk)
 
-            if not result_map:
-                # Both attempts failed — mark whole chunk as unknown error
-                api_errors += len(chunk)
+            if not batch_ok:
+                # Batch endpoint failed — fall back to individual requests
                 print(
-                    f"[LoRA Keywords] Batch {chunk_index + 1} failed completely;"
-                    f" marking {len(chunk)} hash(es) as not_found"
+                    f"[LoRA Keywords] Batch {chunk_index + 1} failed;"
+                    f" falling back to individual requests for {len(chunk)} hash(es)"
                 )
-
-            for h in chunk:
-                entry = self._build_entry_from_api(h, result_map[h]) \
-                        if h in result_map else self._not_found_entry(h)
-                self._save_cache(entry)
-                done += 1
+                yield gr.update(
+                    value=f"⚠️ Batch {chunk_index + 1} failed, retrying individually…"
+                )
+                for h in chunk:
+                    try:
+                        entry = self._fetch_single(h)
+                    except Exception as e:
+                        print(f"[LoRA Keywords] Individual fetch failed for {h}: {e}")
+                        entry = self._not_found_entry(h)
+                        api_errors += 1
+                    self._save_cache(entry)
+                    done += 1
+            else:
+                for h in chunk:
+                    entry = self._build_entry_from_api(h, result_map[h]) \
+                            if h in result_map else self._not_found_entry(h)
+                    self._save_cache(entry)
+                    done += 1
 
         # Final summary
         not_found_count = sum(
@@ -389,6 +427,24 @@ class LoraKeywordsFinder(scripts.Script):
         }
         """
 
+        # JS: copy any text value to the system clipboard
+        copy_clipboard_js = """
+        function copyToClipboard(text) {
+            if (!text) return text;
+            navigator.clipboard.writeText(text).catch(() => {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.opacity  = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+            });
+            return text;
+        }
+        """
+
         with gr.Accordion("🧙 LoRA Keywords Finder", open=False):
 
             # ── Row 1: LoRA selector + reload ────────────────────────────────
@@ -404,32 +460,45 @@ class LoraKeywordsFinder(scripts.Script):
 
             gr.HTML("<div style='height: 8px'></div>")
 
-            # ── Row 2: Keywords + copy button ─────────────────────────────────
+            # ── Row 2: [📋 copy] Keywords [⚡️ to prompt] ─────────────────────
             with gr.Row(variant="compact"):
+                copy_kw_btn = gr.Button(
+                    "📋", scale=0, elem_classes=["tool"], interactive=False
+                )
                 trained_words_display = gr.Textbox(
                     label="Keywords",
                     interactive=False,
                     value="",
                     placeholder="Select a LoRA to see its keywords…",
                 )
-                copy_to_prompt_btn = gr.Button("⚡️", scale=0, elem_classes=["tool"])
+                copy_to_prompt_btn = gr.Button(
+                    "⚡️", scale=0, elem_classes=["tool"], interactive=False
+                )
 
             gr.HTML("<div style='height: 8px'></div>")
 
-            # ── Row 3: CivitAI URL + open-in-browser button ───────────────────
+            # ── Row 3: [📋 copy] CivitAI URL [🌐 open] ───────────────────────
             with gr.Row(variant="compact"):
+                copy_url_btn = gr.Button(
+                    "📋", scale=0, elem_classes=["tool"], interactive=False
+                )
                 url_display = gr.Textbox(
                     label="CivitAI URL",
                     interactive=False,
                     value="",
                     placeholder="",
                 )
-                open_url_btn = gr.Button("🌐", scale=0, elem_classes=["tool"])
+                open_url_btn = gr.Button(
+                    "🌐", scale=0, elem_classes=["tool"], interactive=False
+                )
 
             gr.HTML("<div style='height: 8px'></div>")
 
-            # ── Row 4: SHA-256 hash ───────────────────────────────────────────
+            # ── Row 4: [📋 copy] SHA-256 hash ────────────────────────────────
             with gr.Row(variant="compact"):
+                copy_hash_btn = gr.Button(
+                    "📋", scale=0, elem_classes=["tool"], interactive=False
+                )
                 hash_display = gr.Textbox(
                     label="SHA-256",
                     interactive=False,
@@ -457,12 +526,37 @@ class LoraKeywordsFinder(scripts.Script):
             lora_dropdown.change(
                 fn=self.get_trained_words,
                 inputs=[lora_dropdown],
-                outputs=[trained_words_display, hash_display, url_display],
+                outputs=[
+                    trained_words_display, hash_display, url_display,
+                    copy_kw_btn, copy_hash_btn, copy_url_btn,
+                    copy_to_prompt_btn, open_url_btn,
+                ],
             )
 
             reload_loras.click(
                 fn=self.reload_lora_list,
                 outputs=[lora_dropdown],
+            )
+
+            copy_kw_btn.click(
+                fn=None,
+                inputs=[trained_words_display],
+                outputs=None,
+                _js=copy_clipboard_js,
+            )
+
+            copy_url_btn.click(
+                fn=None,
+                inputs=[url_display],
+                outputs=None,
+                _js=copy_clipboard_js,
+            )
+
+            copy_hash_btn.click(
+                fn=None,
+                inputs=[hash_display],
+                outputs=None,
+                _js=copy_clipboard_js,
             )
 
             copy_to_prompt_btn.click(
