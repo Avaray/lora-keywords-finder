@@ -266,8 +266,8 @@ class LoraKeywordsFinder(scripts.Script):
         name_str = entry.get("model_name") or MSG_NO_NAME
         name_has_data = name_str != MSG_NO_NAME
         
-        base_model_str = entry.get("base_model") or MSG_NO_NAME
-        model_type_str = entry.get("model_type") or MSG_NO_NAME
+        base_model_str = entry.get("base_model") or ""
+        model_type_str = entry.get("model_type") or ""
 
         url_str = entry.get("model_url") or MSG_NO_URL
         url_has_data = bool(entry.get("model_url"))
