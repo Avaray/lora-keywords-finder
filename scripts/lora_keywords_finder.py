@@ -191,7 +191,7 @@ class LoraKeywordsFinder(scripts.Script):
         images = entry.get("images", [])
         if images:
             img_tags = "".join([f'<a href="{url}" target="_blank"><img src="{url}"/></a>' for url in images])
-            html_content = f'<span style="display: block; margin-bottom: 0.5rem; font-size: 14px; font-weight: 500; opacity: 0.7;">Example Images</span><div class="lkf-custom-gallery">{img_tags}</div>'
+            html_content = f'<span style="display: block; font-size: 14px; font-weight: 500;">Example Images</span><div class="lkf-custom-gallery">{img_tags}</div>'
             gallery_update = gr.update(value=html_content, visible=True)
         else:
             gallery_update = gr.update(value="", visible=False)
