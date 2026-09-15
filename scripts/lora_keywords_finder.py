@@ -502,7 +502,7 @@ class LoraKeywordsFinder(scripts.Script):
             with gr.Row(variant="compact"):
                 choices = [""] + self._list_lora_files()
                 lora_dropdown = gr.Dropdown(
-                    label="LoRA",
+                    label="LoRA File",
                     elem_id="lkf_lora_dropdown",
                     choices=choices,
                     value="",

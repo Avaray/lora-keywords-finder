@@ -67,21 +67,21 @@ def generate_icon_css() -> str:
         data_uri  = f"data:image/svg+xml;base64,{b64}"
         cls       = f"lkf-btn-{name}"
         lines.append(f"""\
-.{cls} {{
+button.{cls} {{
     display: inline-flex !important;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
 }}
-.{cls}::before {{
-    content: '';
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    min-width: 16px;
-    flex-shrink: 0;
-    -webkit-mask: url('{data_uri}') center / contain no-repeat;
-    mask: url('{data_uri}') center / contain no-repeat;
-    background-color: currentColor;
+button.{cls}::before {{
+    content: '' !important;
+    display: inline-block !important;
+    width: 16px !important;
+    height: 16px !important;
+    min-width: 16px !important;
+    flex-shrink: 0 !important;
+    -webkit-mask: url('{data_uri}') center / contain no-repeat !important;
+    mask: url('{data_uri}') center / contain no-repeat !important;
+    background-color: currentColor !important;
 }}""")
     return "\n".join(lines)
