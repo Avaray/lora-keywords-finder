@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-09-16
+
 ### Added
 - **Price field** — shows `Free` or `Paid` for each model based on the CivitAI `licensingFee` value.
 - **Community image carousel** — new "Community" gallery mode fetches the most-reacted community images for the selected model version from CivitAI (`withMeta=true`), filtered strictly by `modelVersionId` to show only images that used the exact version.
@@ -101,7 +103,8 @@ All notable changes to this project will be documented in this file.
 - **⚡️ Copy to Prompt** button — appends fetched keywords to the active txt2img or img2img prompt textarea.
 - Support for ForgeUI and other AUTOMATIC1111-based UIs.
 
-[Unreleased]: https://github.com/Avaray/lora-keywords-finder/compare/0239519...main
+[Unreleased]: https://github.com/Avaray/lora-keywords-finder/compare/v2.3.0...main
+[2.3.0]: https://github.com/Avaray/lora-keywords-finder/compare/0239519...4c0deaf
 [2.2.0]: https://github.com/Avaray/lora-keywords-finder/compare/ead5668...0239519
 [2.1.0]: https://github.com/Avaray/lora-keywords-finder/compare/cb2d011...ead5668
 [2.0.0]: https://github.com/Avaray/lora-keywords-finder/compare/961a028...cb2d011
