@@ -191,7 +191,7 @@ class LoraKeywordsFinder(scripts.Script):
         images = entry.get("images", [])
         if images:
             img_tags = "".join([f'<a href="{url}" target="_blank"><img src="{url}"/></a>' for url in images])
-            html_content = f'<div class="lkf-custom-gallery">{img_tags}</div>'
+            html_content = f'<span style="display: block; margin-bottom: 0.5rem; font-size: 14px; font-weight: 500; opacity: 0.7;">Example Images</span><div class="lkf-custom-gallery">{img_tags}</div>'
             gallery_update = gr.update(value=html_content, visible=True)
         else:
             gallery_update = gr.update(value="", visible=False)
@@ -488,8 +488,8 @@ class LoraKeywordsFinder(scripts.Script):
             #lkf_lora_dropdown .wrap-inner input { margin: 0 !important; }
             .lkf-rounded-btn { border-radius: 0.5em !important; }
             .lkf-custom-gallery { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: flex-start !important; gap: 8px !important; width: 100% !important; box-sizing: border-box !important; }
-            .lkf-custom-gallery a { flex: 1 1 0 !important; max-width: 33.33% !important; display: block !important; overflow: hidden !important; border-radius: 0.5em !important; transition: transform 0.2s ease, opacity 0.2s ease !important; }
-            .lkf-custom-gallery a:hover { transform: scale(1.02) !important; opacity: 0.9 !important; }
+            .lkf-custom-gallery a { flex: 1 1 0 !important; max-width: 33.33% !important; display: block !important; overflow: hidden !important; border-radius: 0.5em !important; transition: opacity 0.2s ease !important; }
+            .lkf-custom-gallery a:hover { opacity: 0.8 !important; }
             .lkf-custom-gallery img { width: 100% !important; height: 250px !important; object-fit: cover !important; display: block !important; }
             </style>""")
 
