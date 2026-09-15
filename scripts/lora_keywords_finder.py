@@ -222,6 +222,7 @@ class LoraKeywordsFinder(scripts.Script):
             gr.update(interactive=kw_has_data),    # copy_to_prompt_btn
             gr.update(interactive=url_has_data),   # open_url_btn
             gr.update(interactive=True),            # open_hash_btn
+            gallery_update,
         )
 
     def _all_buttons_disabled(self):
