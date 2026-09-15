@@ -8,8 +8,8 @@ import gradio as gr  # type: ignore
 from modules import scripts
 from modules import shared
 
-known_dir = os.path.join(scripts.basedir(), "known")
-os.makedirs(known_dir, exist_ok=True)
+cache_dir = os.path.join(scripts.basedir(), "metadata_cache")
+os.makedirs(cache_dir, exist_ok=True)
 config_file = os.path.join(scripts.basedir(), "config.json")
 
 
@@ -65,7 +65,7 @@ class LoraKeywordsFinder(scripts.Script):
     # ── Cache helpers ──────────────────────────────────────────────────────────
 
     def _cache_path(self, file_hash: str) -> str:
-        return os.path.join(known_dir, f"{file_hash}.json")
+        return os.path.join(cache_dir, f"{file_hash}.json")
 
     def _load_cache(self, file_hash: str):
         """Return cache dict, or None if missing / old plain-list format."""
@@ -414,10 +414,10 @@ class LoraKeywordsFinder(scripts.Script):
 
     def clear_cache(self):
         removed = 0
-        for fname in os.listdir(known_dir):
+        for fname in os.listdir(cache_dir):
             if fname.endswith(".json"):
                 try:
-                    os.remove(os.path.join(known_dir, fname))
+                    os.remove(os.path.join(cache_dir, fname))
                     removed += 1
                 except Exception as e:
                     print(f"[LoRA Keywords] Could not delete {fname}: {e}")
