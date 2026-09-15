@@ -470,10 +470,12 @@ class LoraKeywordsFinder(scripts.Script):
         with gr.Accordion("🧙 LoRA Keywords Finder", open=False):
 
 
-            # CSS: fix dropdown padding to match textboxes (uniform 10px, no margin)
+            # CSS: fix dropdown padding/margin to match textboxes
             gr.HTML("""<style>
-            #lkf_lora_dropdown .wrap { margin: 0 !important; padding: 10px !important; }
+            #lkf_lora_dropdown .wrap-inner { padding: 10px !important; }
+            #lkf_lora_dropdown .wrap-inner input { margin: 0 !important; }
             </style>""")
+
 
             # ── Row 1: LoRA selector + reload ────────────────────────────────
 
