@@ -339,7 +339,7 @@ class LoraKeywordsFinder(scripts.Script):
 
                 # Carousel classes
                 visible_cls = " lkf-visible" if idx < 3 else ""
-                tag = f'<div class="lkf-carousel-slide{visible_cls}"><div class="lkf-img-wrapper"><a href="{url}" target="_blank"><img src="{url}"/></a>{btn_html}</div></div>'
+                tag = f'<div class="lkf-carousel-slide{visible_cls}"><div class="lkf-img-wrapper"><a href="{url}" target="_blank"><img src="{url}" loading="lazy"/></a>{btn_html}</div></div>'
                 img_tags_list.append(tag)
 
             img_tags = "".join(img_tags_list)

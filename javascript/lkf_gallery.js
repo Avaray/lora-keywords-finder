@@ -74,7 +74,7 @@ document.addEventListener("click", function(e) {
                             if (pos) btnHtml += `<div class="lkf-img-prompt-btn lkf-pos-btn" data-pos="${pos}" title="Send positive prompt to UI">😇</div>`;
                             if (neg) btnHtml += `<div class="lkf-img-prompt-btn lkf-neg-btn" data-neg="${neg}" title="Send negative prompt to UI">😈</div>`;
                             btnHtml += '</div>';
-                            newHtml += `<div class="lkf-carousel-slide"><div class="lkf-img-wrapper"><a href="${url}" target="_blank"><img src="${url}"/></a>${btnHtml}</div></div>`;
+                            newHtml += `<div class="lkf-carousel-slide"><div class="lkf-img-wrapper"><a href="${url}" target="_blank"><img src="${url}" loading="lazy"/></a>${btnHtml}</div></div>`;
                             added++;
                         });
                         
@@ -105,14 +105,19 @@ document.addEventListener("click", function(e) {
         
         container.setAttribute("data-current-index", currentIndex.toString());
         
-        // Update slide visibility: show 3 slides at a time starting at currentIndex
-        slides.forEach((slide, idx) => {
-            if (idx >= currentIndex && idx < currentIndex + 3) {
-                slide.classList.add("lkf-visible");
-            } else {
-                slide.classList.remove("lkf-visible");
-            }
-        });
+        // Optimized: only toggle slides adjacent to the transition,
+        // avoiding a full forEach over all slides (which grows unbounded in community mode).
+        const prevIndex = parseInt(container.getAttribute("data-prev-index") || "0", 10);
+        container.setAttribute("data-prev-index", currentIndex.toString());
+
+        // Hide the 3 slides that were visible before
+        for (let i = prevIndex; i < prevIndex + 3; i++) {
+            if (slides[i]) slides[i].classList.remove("lkf-visible");
+        }
+        // Show the 3 slides at the new position
+        for (let i = currentIndex; i < currentIndex + 3; i++) {
+            if (slides[i]) slides[i].classList.add("lkf-visible");
+        }
         
         // Keep both arrows always visible
         const lBtn = container.querySelector(".left-arrow");
