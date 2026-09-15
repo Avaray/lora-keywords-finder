@@ -293,6 +293,7 @@ class LoraKeywordsFinder(scripts.Script):
         name_has_data = name_str != MSG_NO_NAME
         
         base_model_str = entry.get("base_model") or ""
+        if base_model_str.lower() == "unknown": base_model_str = ""
         model_type_str = entry.get("model_type") or ""
 
         url_str = entry.get("model_url") or MSG_NO_URL
@@ -656,7 +657,7 @@ class LoraKeywordsFinder(scripts.Script):
 
                 # ── Row 3.5: Base Model and Type ─────────────────────────────────────
                 with gr.Row(elem_classes=["lkf-base-model-row"]):
-                    base_model_display = gr.Textbox(label="Base model", interactive=False, max_lines=1)
+                    base_model_display = gr.Textbox(label="Base model", interactive=False, max_lines=1, elem_classes=["lkf-gap-right"])
                     model_type_display = gr.Textbox(label="Type", interactive=False, max_lines=1)
 
                 gr.HTML("<div style='height: 8px'></div>")
@@ -723,12 +724,12 @@ class LoraKeywordsFinder(scripts.Script):
                 with gr.Row():
                     show_images_cb = gr.Checkbox(
                         label="Show example images",
-                        value=load_config().get("show_images", True),
+                        value=lambda: load_config().get("show_images", True),
                         elem_classes=["lkf-margin-cb"],
                     )
                     show_adv_fields_cb = gr.Checkbox(
                         label="Show advanced fields",
-                        value=load_config().get("show_advanced", True),
+                        value=lambda: load_config().get("show_advanced", True),
                         elem_classes=["lkf-margin-cb"],
                     )
 
