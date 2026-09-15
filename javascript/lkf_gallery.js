@@ -54,16 +54,25 @@ document.addEventListener("click", function(e) {
                         let newHtml = "";
                         let added = 0;
                         
+                        const requiredVersionId = String(container.getAttribute("data-version-id") || "");
+                        
                         items.forEach(item => {
                             const m = item.meta;
-                            if (m && m.prompt) {
-                                const url = item.url || "";
-                                const pos = encodeURIComponent(m.prompt || "");
-                                const neg = encodeURIComponent(m.negativePrompt || "");
-                                const btnHtml = `<div class="lkf-img-prompt-btn" data-pos="${pos}" data-neg="${neg}" title="Send prompts to UI">📝</div>`;
-                                newHtml += `<div class="lkf-carousel-slide"><div class="lkf-img-wrapper"><a href="${url}" target="_blank"><img src="${url}"/></a>${btnHtml}</div></div>`;
-                                added++;
+                            if (!m || !m.prompt) return;
+                            
+                            // Verify this image actually used the exact model version selected by the user
+                            const resources = m.civitaiResources || [];
+                            if (requiredVersionId && resources.length > 0) {
+                                const usedVersions = resources.map(r => String(r.modelVersionId || ""));
+                                if (!usedVersions.includes(requiredVersionId)) return;
                             }
+                            
+                            const url = item.url || "";
+                            const pos = encodeURIComponent(m.prompt || "");
+                            const neg = encodeURIComponent(m.negativePrompt || "");
+                            const btnHtml = `<div class="lkf-img-prompt-btn" data-pos="${pos}" data-neg="${neg}" title="Send prompts to UI">📝</div>`;
+                            newHtml += `<div class="lkf-carousel-slide"><div class="lkf-img-wrapper"><a href="${url}" target="_blank"><img src="${url}"/></a>${btnHtml}</div></div>`;
+                            added++;
                         });
                         
                         if (newHtml) {

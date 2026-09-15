@@ -221,6 +221,7 @@ class LoraKeywordsFinder(scripts.Script):
     
     def _fetch_community_images(self, version_id: str) -> tuple:
         import requests
+        str_version_id = str(version_id)
         try:
             resp = requests.get(
                 f"https://civitai.com/api/v1/images?modelVersionId={version_id}&sort=Most%20Reactions&period=AllTime&limit=100&withMeta=true",
@@ -233,19 +234,26 @@ class LoraKeywordsFinder(scripts.Script):
                 valid_images = []
                 for item in items:
                     meta = item.get("meta")
-                    if meta and meta.get("prompt"):
-                        valid_images.append({
-                            "url": item.get("url", ""),
-                            "prompt": meta.get("prompt", ""),
-                            "negativePrompt": meta.get("negativePrompt", "")
-                        })
-                    # We can keep more than 21 since JS handles it, but 21 is a good start.
+                    if not meta or not meta.get("prompt"):
+                        continue
+                    # Verify this image actually used THIS specific version via civitaiResources.
+                    # CivitAI may tag images to a model even if a different version was used.
+                    resources = meta.get("civitaiResources", [])
+                    if resources:
+                        used_versions = {str(r.get("modelVersionId")) for r in resources if r.get("modelVersionId")}
+                        if str_version_id not in used_versions:
+                            continue  # Image was tagged to model but used a different version
+                    valid_images.append({
+                        "url": item.get("url", ""),
+                        "prompt": meta.get("prompt", ""),
+                        "negativePrompt": meta.get("negativePrompt", "")
+                    })
                     if len(valid_images) >= 21:
                         break
                 return valid_images, next_page
         except Exception as e:
             print(f"[LoRA Keywords] Error fetching community images: {e}")
-        return [], "" 
+        return [], ""
 
     def _fetch_batch_chunk(self, chunk: list) -> tuple:
         """
@@ -324,7 +332,8 @@ class LoraKeywordsFinder(scripts.Script):
                 
             mode_label = "Community Images (Popular)" if gallery_mode == "Community" else "Official Example Images"
             mode_attr = 'data-mode="community"' if gallery_mode == "Community" else ''
-            html_content = f'<span style="display: block; font-size: 14px; font-weight: 500;">{mode_label}</span><div class="lkf-carousel-container" data-current-index="0" {mode_attr}{next_page_attr}>{img_tags}{arrows_html}</div>'
+            version_id_attr = f' data-version-id="{entry.get("version_id", "")}"' if gallery_mode == "Community" else ''
+            html_content = f'<span style="display: block; font-size: 14px; font-weight: 500;">{mode_label}</span><div class="lkf-carousel-container" data-current-index="0" {mode_attr}{version_id_attr}{next_page_attr}>{img_tags}{arrows_html}</div>'
             gallery_update = gr.update(value=html_content, visible=True)
         else:
             gallery_update = gr.update(value="", visible=False)
