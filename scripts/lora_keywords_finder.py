@@ -395,7 +395,7 @@ class LoraKeywordsFinder(scripts.Script):
             with gr.Row(variant="compact"):
                 choices = [""] + self._list_lora_files()
                 lora_dropdown = gr.Dropdown(
-                    show_label=False,
+                    label="LoRA",
                     choices=choices,
                     value="",
                     type="value",
@@ -407,7 +407,7 @@ class LoraKeywordsFinder(scripts.Script):
             # ── Row 2: Keywords + copy button ─────────────────────────────────
             with gr.Row(variant="compact"):
                 trained_words_display = gr.Textbox(
-                    show_label=False,
+                    label="Keywords",
                     interactive=False,
                     value="",
                     placeholder="Select a LoRA to see its keywords…",
@@ -416,18 +416,7 @@ class LoraKeywordsFinder(scripts.Script):
 
             gr.HTML("<div style='height: 8px'></div>")
 
-            # ── Row 3: SHA-256 hash ───────────────────────────────────────────
-            with gr.Row(variant="compact"):
-                hash_display = gr.Textbox(
-                    label="SHA-256",
-                    interactive=False,
-                    value="",
-                    placeholder="",
-                )
-
-            gr.HTML("<div style='height: 8px'></div>")
-
-            # ── Row 4: CivitAI URL + open-in-browser button ───────────────────
+            # ── Row 3: CivitAI URL + open-in-browser button ───────────────────
             with gr.Row(variant="compact"):
                 url_display = gr.Textbox(
                     label="CivitAI URL",
@@ -439,11 +428,23 @@ class LoraKeywordsFinder(scripts.Script):
 
             gr.HTML("<div style='height: 8px'></div>")
 
+            # ── Row 4: SHA-256 hash ───────────────────────────────────────────
+            with gr.Row(variant="compact"):
+                hash_display = gr.Textbox(
+                    label="SHA-256",
+                    interactive=False,
+                    value="",
+                    placeholder="",
+                )
+
+            gr.HTML("<div style='height: 8px'></div>")
+
             # ── Advanced Options ──────────────────────────────────────────────
             with gr.Accordion("⚙️ Advanced Options", open=False):
                 with gr.Row(variant="compact"):
                     clear_cache_btn = gr.Button("🗑️ Clear Cache",        variant="secondary")
-                    fetch_all_btn   = gr.Button("⬇️ Fetch All Metadata", variant="primary")
+                    fetch_all_btn   = gr.Button("⬇️ Fetch All Metadata", variant="secondary")
+                gr.HTML("<div style='height: 8px'></div>")
                 adv_status = gr.Textbox(
                     show_label=False,
                     interactive=False,
