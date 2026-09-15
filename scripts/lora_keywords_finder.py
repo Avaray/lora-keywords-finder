@@ -460,16 +460,16 @@ class LoraKeywordsFinder(scripts.Script):
 
             gr.HTML("<div style='height: 8px'></div>")
 
-            # ── Row 2: [📋 copy] Keywords [⚡️ to prompt] ─────────────────────
+            # ── Row 2: Keywords [📋 copy] [⚡️ to prompt] ────────────────────
             with gr.Row(variant="compact"):
-                copy_kw_btn = gr.Button(
-                    "📋", scale=0, elem_classes=["tool"], interactive=False
-                )
                 trained_words_display = gr.Textbox(
                     label="Keywords",
                     interactive=False,
                     value="",
                     placeholder="Select a LoRA to see its keywords…",
+                )
+                copy_kw_btn = gr.Button(
+                    "📋", scale=0, elem_classes=["tool"], interactive=False
                 )
                 copy_to_prompt_btn = gr.Button(
                     "⚡️", scale=0, elem_classes=["tool"], interactive=False
@@ -477,16 +477,16 @@ class LoraKeywordsFinder(scripts.Script):
 
             gr.HTML("<div style='height: 8px'></div>")
 
-            # ── Row 3: [📋 copy] CivitAI URL [🌐 open] ───────────────────────
+            # ── Row 3: CivitAI URL [📋 copy] [🌐 open] ───────────────────────
             with gr.Row(variant="compact"):
-                copy_url_btn = gr.Button(
-                    "📋", scale=0, elem_classes=["tool"], interactive=False
-                )
                 url_display = gr.Textbox(
                     label="CivitAI URL",
                     interactive=False,
                     value="",
                     placeholder="",
+                )
+                copy_url_btn = gr.Button(
+                    "📋", scale=0, elem_classes=["tool"], interactive=False
                 )
                 open_url_btn = gr.Button(
                     "🌐", scale=0, elem_classes=["tool"], interactive=False
@@ -494,16 +494,16 @@ class LoraKeywordsFinder(scripts.Script):
 
             gr.HTML("<div style='height: 8px'></div>")
 
-            # ── Row 4: [📋 copy] SHA-256 hash ────────────────────────────────
+            # ── Row 4: SHA-256 hash [📋 copy] ────────────────────────────────
             with gr.Row(variant="compact"):
-                copy_hash_btn = gr.Button(
-                    "📋", scale=0, elem_classes=["tool"], interactive=False
-                )
                 hash_display = gr.Textbox(
                     label="SHA-256",
                     interactive=False,
                     value="",
                     placeholder="",
+                )
+                copy_hash_btn = gr.Button(
+                    "📋", scale=0, elem_classes=["tool"], interactive=False
                 )
 
             gr.HTML("<div style='height: 8px'></div>")
