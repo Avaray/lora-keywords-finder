@@ -225,8 +225,9 @@ class LoraKeywordsFinder(scripts.Script):
         return tuple(gr.update(interactive=False) for _ in range(7))
 
     def reload_lora_list(self):
-        choices = [""] + self._list_lora_files()
-        return gr.update(choices=choices, value="")
+        files = self._list_lora_files()
+        choices = [""] + files
+        return gr.update(choices=choices, value="", label=f"File ({len(files)} available)")
 
     def get_trained_words(self, lora_file):
         """Returns (kw, name, hash, url,
@@ -481,9 +482,10 @@ class LoraKeywordsFinder(scripts.Script):
             # ── Row 1: File selector + reload ────────────────────────────────
 
             with gr.Row(variant="compact"):
-                choices = [""] + self._list_lora_files()
+                files = self._list_lora_files()
+                choices = [""] + files
                 lora_dropdown = gr.Dropdown(
-                    label="File",
+                    label=f"File ({len(files)} available)",
                     elem_id="lkf_lora_dropdown",
                     choices=choices,
                     value="",
