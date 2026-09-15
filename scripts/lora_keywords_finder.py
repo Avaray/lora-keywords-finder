@@ -80,6 +80,7 @@ class LoraKeywordsFinder(scripts.Script):
             "model_name": model_name,
             "model_url":  model_url,
             "keywords":   words,
+            "images":     [img.get("url") for img in api_data.get("images", []) if img.get("url")][:3],
             "not_found":  False,
         }
 
@@ -91,6 +92,7 @@ class LoraKeywordsFinder(scripts.Script):
             "model_name": None,
             "model_url":  None,
             "keywords":   [],
+            "images":     [],
             "not_found":  True,
         }
 
@@ -186,6 +188,8 @@ class LoraKeywordsFinder(scripts.Script):
     # ── UI action handlers ─────────────────────────────────────────────────────
 
     def _entry_to_ui(self, entry: dict, file_hash: str):
+        images = entry.get("images", [])
+        gallery_update = gr.update(value=images, visible=bool(images))
         """
         Convert a cache dict to UI gr.update objects.
         Returns: (kw, name, hash, url,
@@ -476,6 +480,7 @@ class LoraKeywordsFinder(scripts.Script):
             gr.HTML("""<style>
             #lkf_lora_dropdown .wrap-inner { padding: 10px !important; }
             #lkf_lora_dropdown .wrap-inner input { margin: 0 !important; }
+        .lkf-rounded-btn { border-radius: 0.5em !important; }
             </style>""")
 
 
@@ -560,6 +565,20 @@ class LoraKeywordsFinder(scripts.Script):
 
             gr.HTML("<div style='height: 8px'></div>")
 
+            # ── Row 6: Image Gallery ─────────────────────────────────────────
+            images_gallery = gr.Gallery(
+                label="Preview Images",
+                show_label=False,
+                interactive=False,
+                columns=3,
+                rows=1,
+                height="auto",
+                object_fit="contain",
+                visible=False,
+            )
+
+            gr.HTML("<div style='height: 8px'></div>")
+
             # ── Advanced Options ──────────────────────────────────────────────
             with gr.Accordion("⚙️ Advanced Options", open=False):
                 with gr.Row(variant="compact"):
@@ -581,7 +600,7 @@ class LoraKeywordsFinder(scripts.Script):
                 outputs=[
                     trained_words_display, name_display, hash_display, url_display,
                     copy_kw_btn, copy_name_btn, copy_hash_btn, copy_url_btn,
-                    copy_to_prompt_btn, open_url_btn, open_hash_btn,
+                    copy_to_prompt_btn, open_url_btn, open_hash_btn, images_gallery,
                 ],
             )
 
