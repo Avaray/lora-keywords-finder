@@ -126,7 +126,7 @@ class LoraKeywordsFinder(scripts.Script):
         root_files, subdir_files = [], []
         for root, _, files in os.walk(lora_dir):
             for filename in files:
-                if filename.lower().endswith((".ckpt", ".gguf", ".onnx", ".pkl", ".pt", ".pth", ".safetensors" )):
+                if filename.lower().endswith((".bin", ".ckpt", ".gguf", ".onnx", ".pkl", ".pt", ".pth", ".pwf", ".safetensors" )):
                     rel_path = os.path.relpath(root, lora_dir)
                     if rel_path == ".":
                         root_files.append(filename)
@@ -261,7 +261,7 @@ class LoraKeywordsFinder(scripts.Script):
                     copy_to_prompt_btn, open_url_btn, open_hash_btn)."""
         empty = (gr.update(value=""), gr.update(value=""),
                  gr.update(value=""), gr.update(value=""),
-                 *self._all_buttons_disabled())
+                 *self._all_buttons_disabled(), gr.update(value="", visible=False))
         if not lora_file:
             return empty
 
@@ -272,7 +272,7 @@ class LoraKeywordsFinder(scripts.Script):
             print(f"[LoRA Keywords] File not found: {full_path}")
             return (gr.update(value="Error: File not found"),
                     gr.update(value=""), gr.update(value=""), gr.update(value=""),
-                    *self._all_buttons_disabled())
+                    *self._all_buttons_disabled(), gr.update(value="", visible=False))
         except Exception as e:
             print(f"[LoRA Keywords] Error hashing {full_path}: {e}")
             return (gr.update(value="Error reading file"),
@@ -596,7 +596,8 @@ class LoraKeywordsFinder(scripts.Script):
 
             # ── Advanced Options ──────────────────────────────────────────────
             with gr.Accordion("⚙️ Advanced Options", open=False):
-                show_images_cb = gr.Checkbox(label="Show example images", value=load_config().get("show_images", True))
+                show_images_cb = gr.Checkbox(label="Show example images", value=load_config().get("show_images", True), elem_classes=["lkf-margin-cb"])
+                gr.HTML("<style>.lkf-margin-cb { margin-bottom: 12px !important; }</style>")
                 with gr.Row():
                     clear_cache_btn = gr.Button("🗑️ Clear Cache",        variant="secondary")
                     fetch_all_btn   = gr.Button("⬇️ Fetch All Metadata", variant="secondary")
