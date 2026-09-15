@@ -575,6 +575,7 @@ class LoraKeywordsFinder(scripts.Script):
             .lkf-custom-gallery { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: flex-start !important; gap: 8px !important; width: 100% !important; box-sizing: border-box !important; }
             .lkf-custom-gallery a { flex: 1 1 0 !important; max-width: 33.33% !important; display: block !important; overflow: hidden !important; border-radius: 0.5em !important; }
             .lkf-custom-gallery img { width: 100% !important; height: 250px !important; object-fit: cover !important; display: block !important; }
+            .lkf-base-model-row { gap: 1em !important; }
             </style>""")
 
             # ── Row 1: File selector + reload ────────────────────────────────
@@ -626,7 +627,7 @@ class LoraKeywordsFinder(scripts.Script):
                 gr.HTML("<div style='height: 8px'></div>")
 
                 # ── Row 3.5: Base Model and Type ─────────────────────────────────────
-                with gr.Row():
+                with gr.Row(elem_classes=["lkf-base-model-row"]):
                     base_model_display = gr.Textbox(label="Base model", interactive=False, max_lines=1)
                     model_type_display = gr.Textbox(label="Type", interactive=False, max_lines=1)
 
