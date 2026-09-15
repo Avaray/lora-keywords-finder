@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.0] - 2026-09-15
+## 2.0.0 - 2026-09-15
 
 ### Added
 - **SHA-256 hash field** — always-visible read-only textbox showing the hash of the selected LoRA file, useful for manual CivitAI lookups.
@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Models returning HTTP 404 now have their `not_found` status persisted to cache, preventing unnecessary repeat API calls on subsequent selections.
 - JavaScript copy-guard and Python non-copyable prefix list updated to reflect all new message strings.
 
-## [1.0.0] - 2024-01-01
+## 1.0.0 - 2024-01-01
 
 ### Added
 - Initial release.
@@ -34,5 +34,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **⚡️ Copy to Prompt** button — appends fetched keywords to the active txt2img or img2img prompt textarea.
 - Support for ForgeUI and other AUTOMATIC1111-based UIs.
 
-[2.0.0]: https://github.com/Avaray/lora-keywords-finder/compare/v1.0.0...v2.0.0
-[1.0.0]: https://github.com/Avaray/lora-keywords-finder/releases/tag/v1.0.0
