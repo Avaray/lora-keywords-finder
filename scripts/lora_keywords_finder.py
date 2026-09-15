@@ -69,12 +69,14 @@ class LoraKeywordsFinder(scripts.Script):
         model_id   = api_data.get("modelId")
         version_id = api_data.get("id")
         model_url  = CIVITAI_MODEL_URL.format(model_id=model_id) if model_id else None
+        model_name = api_data.get("model", {}).get("name")
         words = api_data.get("trainedWords") or []
         words = [self._normalize_keyword(w) for w in words if w.strip()]
         return {
             "hash":       file_hash,
             "model_id":   model_id,
             "version_id": version_id,
+            "model_name": model_name,
             "model_url":  model_url,
             "keywords":   words,
             "not_found":  False,
@@ -85,6 +87,7 @@ class LoraKeywordsFinder(scripts.Script):
             "hash":       file_hash,
             "model_id":   None,
             "version_id": None,
+            "model_name": None,
             "model_url":  None,
             "keywords":   [],
             "not_found":  True,
@@ -184,43 +187,52 @@ class LoraKeywordsFinder(scripts.Script):
     def _entry_to_ui(self, entry: dict, file_hash: str):
         """
         Convert a cache dict to UI gr.update objects.
-        Returns: (kw, hash, url, copy_kw_btn, copy_hash_btn, copy_url_btn,
-                  copy_to_prompt_btn, open_url_btn)
+        Returns: (kw, name, hash, url,
+                  copy_kw_btn, copy_name_btn, copy_hash_btn, copy_url_btn,
+                  copy_to_prompt_btn, open_url_btn, open_hash_btn)
         """
         if entry.get("not_found"):
-            kw_str      = MSG_NOT_ON_CIVITAI
-            kw_has_data = False
+            kw_str       = MSG_NOT_ON_CIVITAI
+            kw_has_data  = False
         else:
-            words       = entry.get("keywords") or []
-            kw_str      = ", ".join(words) if words else MSG_NO_KEYWORDS
-            kw_has_data = bool(words)
+            words        = entry.get("keywords") or []
+            kw_str       = ", ".join(words) if words else MSG_NO_KEYWORDS
+            kw_has_data  = bool(words)
+
+        name_str      = entry.get("model_name") or ""
+        name_has_data = bool(name_str)
 
         url_str      = entry.get("model_url") or MSG_NO_URL
         url_has_data = bool(entry.get("model_url"))
 
         return (
             gr.update(value=kw_str),
+            gr.update(value=name_str),
             gr.update(value=file_hash),
             gr.update(value=url_str),
-            gr.update(interactive=kw_has_data),   # copy_kw_btn
-            gr.update(interactive=True),           # copy_hash_btn (hash always present)
+            gr.update(interactive=kw_has_data),    # copy_kw_btn
+            gr.update(interactive=name_has_data),  # copy_name_btn
+            gr.update(interactive=True),            # copy_hash_btn
             gr.update(interactive=url_has_data),   # copy_url_btn
             gr.update(interactive=kw_has_data),    # copy_to_prompt_btn
             gr.update(interactive=url_has_data),   # open_url_btn
+            gr.update(interactive=True),            # open_hash_btn
         )
 
     def _all_buttons_disabled(self):
-        """Return disabled gr.updates for all 5 interactive buttons."""
-        return tuple(gr.update(interactive=False) for _ in range(5))
+        """Return disabled gr.updates for all 7 interactive buttons."""
+        return tuple(gr.update(interactive=False) for _ in range(7))
 
     def reload_lora_list(self):
         choices = [""] + self._list_lora_files()
         return gr.update(choices=choices, value="")
 
     def get_trained_words(self, lora_file):
-        """Returns (kw, hash, url, copy_kw_btn, copy_hash_btn, copy_url_btn,
-                    copy_to_prompt_btn, open_url_btn)."""
-        empty = (gr.update(value=""), gr.update(value=""), gr.update(value=""),
+        """Returns (kw, name, hash, url,
+                    copy_kw_btn, copy_name_btn, copy_hash_btn, copy_url_btn,
+                    copy_to_prompt_btn, open_url_btn, open_hash_btn)."""
+        empty = (gr.update(value=""), gr.update(value=""),
+                 gr.update(value=""), gr.update(value=""),
                  *self._all_buttons_disabled())
         if not lora_file:
             return empty
@@ -231,12 +243,12 @@ class LoraKeywordsFinder(scripts.Script):
         except FileNotFoundError:
             print(f"[LoRA Keywords] File not found: {full_path}")
             return (gr.update(value="Error: File not found"),
-                    gr.update(value=""), gr.update(value=""),
+                    gr.update(value=""), gr.update(value=""), gr.update(value=""),
                     *self._all_buttons_disabled())
         except Exception as e:
             print(f"[LoRA Keywords] Error hashing {full_path}: {e}")
             return (gr.update(value="Error reading file"),
-                    gr.update(value=""), gr.update(value=""),
+                    gr.update(value=""), gr.update(value=""), gr.update(value=""),
                     *self._all_buttons_disabled())
 
         print(f"[LoRA Keywords] Selected '{lora_file}', hash: {file_hash}")
@@ -258,6 +270,7 @@ class LoraKeywordsFinder(scripts.Script):
                   "Network error — could not reach CivitAI"
             return (
                 gr.update(value=msg),
+                gr.update(value=""),
                 gr.update(value=file_hash),
                 gr.update(value=""),
                 *self._all_buttons_disabled(),
@@ -427,6 +440,15 @@ class LoraKeywordsFinder(scripts.Script):
         }
         """
 
+        # JS: open the CivitAI API hash lookup in a new browser tab
+        open_hash_js = """
+        function openHashUrl(hash) {
+            if (!hash || hash.trim() === "") return hash;
+            window.open("https://civitai.com/api/v1/model-versions/by-hash/" + hash.trim(), '_blank');
+            return hash;
+        }
+        """
+
         # JS: copy any text value to the system clipboard
         copy_clipboard_js = """
         function copyToClipboard(text) {
@@ -447,11 +469,19 @@ class LoraKeywordsFinder(scripts.Script):
 
         with gr.Accordion("🧙 LoRA Keywords Finder", open=False):
 
+            # CSS: make the dropdown padding match the textboxes
+            gr.HTML("""<style>
+            #lkf_lora_dropdown { --block-label-padding: 0; }
+            #lkf_lora_dropdown .wrap { padding: var(--input-padding) !important; }
+            #lkf_lora_dropdown select { padding: 0 8px !important; }
+            </style>""")
+
             # ── Row 1: LoRA selector + reload ────────────────────────────────
             with gr.Row(variant="compact"):
                 choices = [""] + self._list_lora_files()
                 lora_dropdown = gr.Dropdown(
                     label="LoRA",
+                    elem_id="lkf_lora_dropdown",
                     choices=choices,
                     value="",
                     type="value",
@@ -477,7 +507,21 @@ class LoraKeywordsFinder(scripts.Script):
 
             gr.HTML("<div style='height: 8px'></div>")
 
-            # ── Row 3: CivitAI URL [📋 copy] [🌐 open] ───────────────────────
+            # ── Row 3: Name [📋 copy] ─────────────────────────────────────────
+            with gr.Row(variant="compact"):
+                name_display = gr.Textbox(
+                    label="Name",
+                    interactive=False,
+                    value="",
+                    placeholder="",
+                )
+                copy_name_btn = gr.Button(
+                    "📋", scale=0, elem_classes=["tool"], interactive=False
+                )
+
+            gr.HTML("<div style='height: 8px'></div>")
+
+            # ── Row 4: CivitAI URL [📋 copy] [🌐 open] ───────────────────────
             with gr.Row(variant="compact"):
                 url_display = gr.Textbox(
                     label="CivitAI URL",
@@ -494,7 +538,7 @@ class LoraKeywordsFinder(scripts.Script):
 
             gr.HTML("<div style='height: 8px'></div>")
 
-            # ── Row 4: SHA-256 hash [📋 copy] ────────────────────────────────
+            # ── Row 5: SHA-256 hash [📋 copy] [🔍 open API] ──────────────────
             with gr.Row(variant="compact"):
                 hash_display = gr.Textbox(
                     label="SHA-256",
@@ -504,6 +548,9 @@ class LoraKeywordsFinder(scripts.Script):
                 )
                 copy_hash_btn = gr.Button(
                     "📋", scale=0, elem_classes=["tool"], interactive=False
+                )
+                open_hash_btn = gr.Button(
+                    "🔍", scale=0, elem_classes=["tool"], interactive=False
                 )
 
             gr.HTML("<div style='height: 8px'></div>")
@@ -527,9 +574,9 @@ class LoraKeywordsFinder(scripts.Script):
                 fn=self.get_trained_words,
                 inputs=[lora_dropdown],
                 outputs=[
-                    trained_words_display, hash_display, url_display,
-                    copy_kw_btn, copy_hash_btn, copy_url_btn,
-                    copy_to_prompt_btn, open_url_btn,
+                    trained_words_display, name_display, hash_display, url_display,
+                    copy_kw_btn, copy_name_btn, copy_hash_btn, copy_url_btn,
+                    copy_to_prompt_btn, open_url_btn, open_hash_btn,
                 ],
             )
 
@@ -541,6 +588,13 @@ class LoraKeywordsFinder(scripts.Script):
             copy_kw_btn.click(
                 fn=None,
                 inputs=[trained_words_display],
+                outputs=None,
+                _js=copy_clipboard_js,
+            )
+
+            copy_name_btn.click(
+                fn=None,
+                inputs=[name_display],
                 outputs=None,
                 _js=copy_clipboard_js,
             )
@@ -573,6 +627,13 @@ class LoraKeywordsFinder(scripts.Script):
                 _js=open_url_js,
             )
 
+            open_hash_btn.click(
+                fn=None,
+                inputs=[hash_display],
+                outputs=None,
+                _js=open_hash_js,
+            )
+
             clear_cache_btn.click(
                 fn=self.clear_cache,
                 outputs=[adv_status],
@@ -583,6 +644,5 @@ class LoraKeywordsFinder(scripts.Script):
                 outputs=[adv_status],
             )
 
-        return [lora_dropdown, trained_words_display, hash_display, url_display]
-
+        return [lora_dropdown, trained_words_display, name_display, hash_display, url_display]
 
