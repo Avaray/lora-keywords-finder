@@ -67,13 +67,13 @@ def generate_icon_css() -> str:
         data_uri  = f"data:image/svg+xml;base64,{b64}"
         cls       = f"lkf-btn-{name}"
         lines.append(f"""\
-.{cls} button {{
+.{cls} {{
     display: inline-flex !important;
     align-items: center;
     justify-content: center;
     gap: 6px;
 }}
-.{cls} button::before {{
+.{cls}::before {{
     content: '';
     display: inline-block;
     width: 16px;
