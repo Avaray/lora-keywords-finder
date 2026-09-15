@@ -129,7 +129,7 @@ class LoraKeywordsFinder(scripts.Script):
                 }
                 for img in api_data.get("images", [])
                 if img.get("url")
-            ][:3],
+            ][:21],
             "not_found": False,
         }
 
