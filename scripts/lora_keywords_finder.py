@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import time
 import hashlib
 import requests
 import gradio as gr  # type: ignore
@@ -9,6 +10,24 @@ from modules import shared
 
 known_dir = os.path.join(scripts.basedir(), "known")
 os.makedirs(known_dir, exist_ok=True)
+
+CIVITAI_SINGLE_URL = "https://civitai.com/api/v1/model-versions/by-hash/{hash}"
+CIVITAI_BATCH_URL  = "https://civitai.com/api/v1/model-versions/by-hash"
+CIVITAI_MODEL_URL  = "https://civitai.com/models/{model_id}"
+
+MSG_NOT_ON_CIVITAI = "This LoRA was not found on CivitAI"
+MSG_NO_KEYWORDS    = "No keywords provided for this LoRA"
+MSG_NO_URL         = "URL not available"
+
+# Prefixes that should NOT be copied to the prompt
+_NON_COPYABLE_PREFIXES = (
+    MSG_NOT_ON_CIVITAI,
+    MSG_NO_KEYWORDS,
+    "Network error",
+    "CivitAI API error",
+    "Error:",
+    "Error reading",
+)
 
 
 class LoraKeywordsFinder(scripts.Script):
@@ -21,221 +40,454 @@ class LoraKeywordsFinder(scripts.Script):
     def show(self, is_img2img):
         return scripts.AlwaysVisible
 
-    def copy_to_prompt(self, text, is_img2img):
-        if not text or text in ["No keywords provided for this LoRA", "Failed to fetch keywords from CivitAI API", "Error fetching keywords"]:
-            return
-        
-        # Get the current prompt
-        if is_img2img:
-            current_prompt = getattr(shared.state, 'img2img_prompt', '')
+    # ── Cache helpers ──────────────────────────────────────────────────────────
+
+    def _cache_path(self, file_hash: str) -> str:
+        return os.path.join(known_dir, f"{file_hash}.json")
+
+    def _load_cache(self, file_hash: str):
+        """Return cache dict, or None if missing / old plain-list format."""
+        path = self._cache_path(file_hash)
+        if not os.path.exists(path):
+            return None
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            # Old format was a plain list — treat as stale
+            if isinstance(data, list):
+                return None
+            return data
+        except Exception:
+            return None
+
+    def _save_cache(self, entry: dict):
+        path = self._cache_path(entry["hash"])
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(entry, f, ensure_ascii=False, indent=2)
+
+    def _build_entry_from_api(self, file_hash: str, api_data: dict) -> dict:
+        model_id   = api_data.get("modelId")
+        version_id = api_data.get("id")
+        model_url  = CIVITAI_MODEL_URL.format(model_id=model_id) if model_id else None
+        words = api_data.get("trainedWords") or []
+        words = [self._normalize_keyword(w) for w in words if w.strip()]
+        return {
+            "hash":       file_hash,
+            "model_id":   model_id,
+            "version_id": version_id,
+            "model_url":  model_url,
+            "keywords":   words,
+            "not_found":  False,
+        }
+
+    def _not_found_entry(self, file_hash: str) -> dict:
+        return {
+            "hash":       file_hash,
+            "model_id":   None,
+            "version_id": None,
+            "model_url":  None,
+            "keywords":   [],
+            "not_found":  True,
+        }
+
+    # ── Utilities ──────────────────────────────────────────────────────────────
+
+    def _normalize_keyword(self, keyword: str) -> str:
+        return re.sub(r",(?=[^\s])", ", ", keyword).strip()
+
+    def _hash_file(self, full_path: str) -> str:
+        with open(full_path, "rb") as f:
+            return hashlib.sha256(f.read()).hexdigest()
+
+    def _list_lora_files(self):
+        lora_dir = shared.cmd_opts.lora_dir
+        root_files, subdir_files = [], []
+        for root, _, files in os.walk(lora_dir):
+            for filename in files:
+                if filename.lower().endswith((".pt", ".safetensors")):
+                    rel_path = os.path.relpath(root, lora_dir)
+                    if rel_path == ".":
+                        root_files.append(filename)
+                    else:
+                        subdir_files.append(os.path.join(rel_path, filename))
+        root_files.sort(key=str.lower)
+        subdir_files.sort(
+            key=lambda x: tuple(p.lower() for p in os.path.normpath(x).split(os.sep))
+        )
+        return root_files + subdir_files
+
+    # ── Single-hash API fetch ──────────────────────────────────────────────────
+
+    def _fetch_single(self, file_hash: str) -> dict:
+        """Fetch one hash from CivitAI. Raises RuntimeError on unexpected HTTP errors."""
+        url  = CIVITAI_SINGLE_URL.format(hash=file_hash)
+        resp = requests.get(url, timeout=15)
+        if resp.status_code == 200:
+            return self._build_entry_from_api(file_hash, resp.json())
+        if resp.status_code == 404:
+            return self._not_found_entry(file_hash)
+        raise RuntimeError(f"HTTP {resp.status_code}")
+
+    # ── Batch API fetch ────────────────────────────────────────────────────────
+
+    def _parse_batch_response(self, raw) -> dict:
+        """
+        Normalise the batch response into {lowercase_hash: api_object}.
+
+        CivitAI may return either:
+          - A dict keyed by hash (possibly uppercased), or
+          - An array of model-version objects, each with a 'files' list.
+        Unmatched hashes are silently absent from the result.
+        """
+        if isinstance(raw, dict):
+            return {k.lower(): v for k, v in raw.items()}
+        if isinstance(raw, list):
+            result = {}
+            for item in raw:
+                for f in item.get("files", []):
+                    sha = f.get("hashes", {}).get("SHA256", "")
+                    if sha:
+                        result[sha.lower()] = item
+            return result
+        return {}
+
+    def _fetch_batch_chunk(self, chunk: list) -> dict:
+        """
+        POST up to 100 hashes to the batch endpoint.
+        Retries once after 1 s on failure.
+        Returns {lowercase_hash: api_object} for matched hashes only.
+        """
+        for attempt in range(2):
+            try:
+                resp = requests.post(
+                    CIVITAI_BATCH_URL,
+                    json={"hashes": chunk},
+                    timeout=30,
+                )
+                if resp.status_code == 200:
+                    return self._parse_batch_response(resp.json())
+                print(
+                    f"[LoRA Keywords] Batch attempt {attempt + 1} failed:"
+                    f" HTTP {resp.status_code}"
+                )
+            except Exception as e:
+                print(f"[LoRA Keywords] Batch attempt {attempt + 1} exception: {e}")
+            if attempt == 0:
+                time.sleep(1)
+        return {}
+
+    # ── UI action handlers ─────────────────────────────────────────────────────
+
+    def _entry_to_ui(self, entry: dict, file_hash: str):
+        """Convert a cache dict to the three UI output gr.update objects."""
+        if entry.get("not_found"):
+            kw_str = MSG_NOT_ON_CIVITAI
         else:
-            current_prompt = getattr(shared.state, 'txt2img_prompt', '')
-        
-        # Append the new text with a comma if there's existing content
-        new_prompt = f"{current_prompt}, {text}" if current_prompt else text
-        
-        # Update the prompt
-        if is_img2img:
-            shared.state.img2img_prompt = new_prompt
-        else:
-            shared.state.txt2img_prompt = new_prompt
-            
-        return new_prompt
+            words  = entry.get("keywords") or []
+            kw_str = ", ".join(words) if words else MSG_NO_KEYWORDS
+
+        url_str = entry.get("model_url") or MSG_NO_URL
+        return (
+            gr.update(value=kw_str),
+            gr.update(value=file_hash),
+            gr.update(value=url_str),
+        )
 
     def reload_lora_list(self):
-        choices = [""] + self.list_lora_files()
+        choices = [""] + self._list_lora_files()
         return gr.update(choices=choices, value="")
 
-    def ui(self, is_img2img):
-        with gr.Accordion("LoRA Keywords Finder", open=False):
-            with gr.Row(variant="compact"):
-                # Add an empty choice as the default selection
-                choices = [""] + self.list_lora_files()
+    def get_trained_words(self, lora_file):
+        """Returns (keywords_update, hash_update, url_update)."""
+        empty = (gr.update(value=""), gr.update(value=""), gr.update(value=""))
+        if not lora_file:
+            return empty
 
+        full_path = os.path.join(shared.cmd_opts.lora_dir, lora_file)
+        try:
+            file_hash = self._hash_file(full_path)
+        except FileNotFoundError:
+            print(f"[LoRA Keywords] File not found: {full_path}")
+            return (gr.update(value="Error: File not found"), gr.update(value=""), gr.update(value=""))
+        except Exception as e:
+            print(f"[LoRA Keywords] Error hashing {full_path}: {e}")
+            return (gr.update(value="Error reading file"), gr.update(value=""), gr.update(value=""))
+
+        print(f"[LoRA Keywords] Selected '{lora_file}', hash: {file_hash}")
+
+        cached = self._load_cache(file_hash)
+        if cached is not None:
+            print(f"[LoRA Keywords] Loaded from cache for '{lora_file}'")
+            return self._entry_to_ui(cached, file_hash)
+
+        # Not cached — fetch from CivitAI
+        try:
+            entry = self._fetch_single(file_hash)
+            self._save_cache(entry)
+            return self._entry_to_ui(entry, file_hash)
+        except Exception as e:
+            err = str(e)
+            print(f"[LoRA Keywords] Fetch error for '{lora_file}': {err}")
+            msg = f"CivitAI API error ({err})" if err.startswith("HTTP") else \
+                  "Network error — could not reach CivitAI"
+            return (
+                gr.update(value=msg),
+                gr.update(value=file_hash),
+                gr.update(value=""),
+            )
+
+    def clear_cache(self):
+        removed = 0
+        for fname in os.listdir(known_dir):
+            if fname.endswith(".json"):
+                try:
+                    os.remove(os.path.join(known_dir, fname))
+                    removed += 1
+                except Exception as e:
+                    print(f"[LoRA Keywords] Could not delete {fname}: {e}")
+        print(f"[LoRA Keywords] Cache cleared: {removed} file(s) removed")
+        return gr.update(value=f"✅ Cache cleared — {removed} file(s) removed")
+
+    def fetch_all_metadata(self):
+        """
+        Generator: hashes all LoRA files, fetches metadata in batches of 100,
+        yields gr.update objects to the status textbox after each step.
+        """
+        lora_files = self._list_lora_files()
+        total = len(lora_files)
+        if total == 0:
+            yield gr.update(value="No LoRA files found.")
+            return
+
+        yield gr.update(value=f"🔍 Hashing {total} file(s)…")
+
+        to_fetch   = {}  # {hash: lora_file} — only uncached ones
+        skipped    = 0
+        hash_errors = 0
+
+        for lora_file in lora_files:
+            full_path = os.path.join(shared.cmd_opts.lora_dir, lora_file)
+            try:
+                h = self._hash_file(full_path)
+            except Exception as e:
+                print(f"[LoRA Keywords] Cannot hash '{lora_file}': {e}")
+                hash_errors += 1
+                continue
+            if self._load_cache(h) is not None:
+                skipped += 1
+            else:
+                to_fetch[h] = lora_file
+
+        if not to_fetch:
+            msg = f"✅ All {total} LoRA(s) already cached."
+            if hash_errors:
+                msg += f" ({hash_errors} file(s) could not be read)"
+            yield gr.update(value=msg)
+            return
+
+        n_to_fetch = len(to_fetch)
+        yield gr.update(
+            value=f"⬇️ Fetching metadata for {n_to_fetch} LoRA(s)"
+            f" (skipped {skipped} already cached)…"
+        )
+
+        CHUNK_SIZE   = 100
+        all_hashes   = list(to_fetch.keys())
+        total_chunks = (n_to_fetch + CHUNK_SIZE - 1) // CHUNK_SIZE
+        done         = 0
+        api_errors   = 0
+
+        for chunk_index in range(total_chunks):
+            chunk = all_hashes[chunk_index * CHUNK_SIZE: (chunk_index + 1) * CHUNK_SIZE]
+            yield gr.update(
+                value=f"⬇️ Batch {chunk_index + 1}/{total_chunks}"
+                f" ({len(chunk)} hashes) — fetching…"
+            )
+
+            result_map = self._fetch_batch_chunk(chunk)
+
+            if not result_map:
+                # Both attempts failed — mark whole chunk as unknown error
+                api_errors += len(chunk)
+                print(
+                    f"[LoRA Keywords] Batch {chunk_index + 1} failed completely;"
+                    f" marking {len(chunk)} hash(es) as not_found"
+                )
+
+            for h in chunk:
+                entry = self._build_entry_from_api(h, result_map[h]) \
+                        if h in result_map else self._not_found_entry(h)
+                self._save_cache(entry)
+                done += 1
+
+        # Final summary
+        not_found_count = sum(
+            1 for h in all_hashes
+            if self._load_cache(h) and self._load_cache(h).get("not_found")
+        )
+        found_count = done - not_found_count
+        parts = [f"✅ Done! Processed {done} LoRA(s)."]
+        parts.append(f"Found on CivitAI: {found_count}, not found: {not_found_count}.")
+        if skipped:
+            parts.append(f"Skipped (cached): {skipped}.")
+        if hash_errors:
+            parts.append(f"Hashing errors: {hash_errors}.")
+        if api_errors:
+            parts.append(f"API errors: {api_errors}.")
+        status = " ".join(parts)
+        print(f"[LoRA Keywords] Fetch all complete — {status}")
+        yield gr.update(value=status)
+
+    # ── UI ─────────────────────────────────────────────────────────────────────
+
+    def ui(self, is_img2img):
+        # JS: copy keywords text to the active txt2img / img2img prompt textarea
+        copy_js = """
+        function copyToPrompt(text) {
+            const skip = [
+                "This LoRA was not found on CivitAI",
+                "No keywords provided for this LoRA",
+                "Network error",
+                "CivitAI API error",
+                "Error:",
+                "Error reading",
+                "URL not available",
+            ];
+            if (!text || skip.some(s => text.startsWith(s))) return text;
+
+            const tabs = document.querySelector('#tabs')?.querySelector('div');
+            if (!tabs) return text;
+            const tabButtons = tabs.querySelectorAll('button');
+            let activeTabIndex = -1;
+            tabButtons.forEach((btn, idx) => {
+                if (btn.classList.contains('selected')) activeTabIndex = idx;
+            });
+
+            let textarea;
+            if (activeTabIndex === 0) {
+                textarea = document.querySelector('#txt2img_prompt textarea');
+            } else if (activeTabIndex === 1) {
+                textarea = document.querySelector('#img2img_prompt textarea');
+            }
+
+            if (textarea) {
+                const cur = textarea.value.trim();
+                textarea.value = cur ? `${cur}, ${text}` : text;
+                textarea.dispatchEvent(new Event('input',  { bubbles: true }));
+                textarea.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            return text;
+        }
+        """
+
+        # JS: open the CivitAI model URL in a new browser tab
+        open_url_js = """
+        function openCivitaiUrl(url) {
+            if (!url || url.trim() === "" || url.trim() === "URL not available") return url;
+            window.open(url.trim(), '_blank');
+            return url;
+        }
+        """
+
+        with gr.Accordion("🧙 LoRA Keywords Finder", open=False):
+
+            # ── Row 1: LoRA selector + reload ────────────────────────────────
+            with gr.Row(variant="compact"):
+                choices = [""] + self._list_lora_files()
                 lora_dropdown = gr.Dropdown(
                     show_label=False,
                     choices=choices,
-                    value="",  # Set empty string as default value
-                    type="value"
+                    value="",
+                    type="value",
                 )
-
                 reload_loras = gr.Button("🔄", scale=0, elem_classes=["tool"])
 
-            # Add gap between rows
             gr.HTML("<div style='height: 8px'></div>")
 
+            # ── Row 2: Keywords + copy button ─────────────────────────────────
             with gr.Row(variant="compact"):
                 trained_words_display = gr.Textbox(
                     show_label=False,
                     interactive=False,
-                    value="",  # Set empty string as initial value
-                    placeholder="Select a LoRA to see its keywords..."
+                    value="",
+                    placeholder="Select a LoRA to see its keywords…",
+                )
+                copy_to_prompt_btn = gr.Button("⚡️", scale=0, elem_classes=["tool"])
+
+            gr.HTML("<div style='height: 8px'></div>")
+
+            # ── Row 3: SHA-256 hash ───────────────────────────────────────────
+            with gr.Row(variant="compact"):
+                hash_display = gr.Textbox(
+                    label="SHA-256",
+                    interactive=False,
+                    value="",
+                    placeholder="",
                 )
 
-                copy_to_prompt = gr.Button("⚡️", scale=0, elem_classes=["tool"])
+            gr.HTML("<div style='height: 8px'></div>")
 
-                # JavaScript code to copy the selected text to the prompt
-                copy_js = """
-                function copyToPrompt(text) {
-                    // Check if text is empty or contains error messages
-                    if (!text || text === "" || 
-                        text === "No keywords provided for this LoRA" || 
-                        text === "Failed to fetch keywords from CivitAI API" || 
-                        text === "Error fetching keywords") {
-                        return text;
-                    }
-                    
-                    // Find which tab is currently selected
-                    const tabs = document.querySelector('#tabs')?.querySelector('div');
-                    if (!tabs) return text;
-                    
-                    // Get all tab buttons
-                    const tabButtons = tabs.querySelectorAll('button');
-                    let activeTabIndex = -1;
-                    
-                    // Find which tab is active
-                    tabButtons.forEach((button, index) => {
-                        if (button.classList.contains('selected')) {
-                            activeTabIndex = index;
-                        }
-                    });
-                    
-                    // Select the appropriate textarea based on active tab
-                    let textarea;
-                    if (activeTabIndex === 0) {
-                        textarea = document.querySelector('#txt2img_prompt textarea');
-                    } else if (activeTabIndex === 1) {
-                        textarea = document.querySelector('#img2img_prompt textarea');
-                    }
-                    
-                    if (textarea) {
-                        const currentText = textarea.value.trim();
-                        textarea.value = currentText ? `${currentText}, ${text}` : text;
-                        
-                        // Create and dispatch input event
-                        const event = new Event('input', { bubbles: true });
-                        textarea.dispatchEvent(event);
-                        
-                        // If using gradio's version below 3.29, you might need to trigger a change event as well
-                        const changeEvent = new Event('change', { bubbles: true });
-                        textarea.dispatchEvent(changeEvent);
-                    }
-                    return text;
-                }
-                """
+            # ── Row 4: CivitAI URL + open-in-browser button ───────────────────
+            with gr.Row(variant="compact"):
+                url_display = gr.Textbox(
+                    label="CivitAI URL",
+                    interactive=False,
+                    value="",
+                    placeholder="",
+                )
+                open_url_btn = gr.Button("🌐", scale=0, elem_classes=["tool"])
 
-                # Event handler for dropdown change
-                lora_dropdown.change(
-                    fn=self.get_trained_words,
-                    inputs=[lora_dropdown],
-                    outputs=[trained_words_display]
+            gr.HTML("<div style='height: 8px'></div>")
+
+            # ── Advanced Options ──────────────────────────────────────────────
+            with gr.Accordion("⚙️ Advanced Options", open=False):
+                with gr.Row(variant="compact"):
+                    clear_cache_btn = gr.Button("🗑️ Clear Cache",        variant="secondary")
+                    fetch_all_btn   = gr.Button("⬇️ Fetch All Metadata", variant="primary")
+                adv_status = gr.Textbox(
+                    show_label=False,
+                    interactive=False,
+                    value="",
+                    placeholder="Status will appear here…",
                 )
 
-                # Event handler for reload button
-                reload_loras.click(
-                    fn=self.reload_lora_list,
-                    outputs=[lora_dropdown]
-                )
+            # ── Event handlers ────────────────────────────────────────────────
 
-                # Event handler for copy button with JavaScript
-                copy_to_prompt.click(
-                    fn=None,
-                    inputs=[trained_words_display],
-                    outputs=None,
-                    _js=copy_js
-                )
+            lora_dropdown.change(
+                fn=self.get_trained_words,
+                inputs=[lora_dropdown],
+                outputs=[trained_words_display, hash_display, url_display],
+            )
 
-        return [lora_dropdown, trained_words_display]
+            reload_loras.click(
+                fn=self.reload_lora_list,
+                outputs=[lora_dropdown],
+            )
 
-    def normalize_keyword(self, keyword):
-        return re.sub(r",(?=[^\s])", ", ", keyword).strip()
+            copy_to_prompt_btn.click(
+                fn=None,
+                inputs=[trained_words_display],
+                outputs=None,
+                _js=copy_js,
+            )
 
-    def list_lora_files(self):
-        lora_dir = shared.cmd_opts.lora_dir
-        root_files = []
-        subdir_files = []
-        
-        # Walk through directory and subdirectories
-        for root, _, files in os.walk(lora_dir):
-            for filename in files:
-                if filename.lower().endswith((".pt", ".safetensors")):
-                    # Get the relative path from the lora_dir
-                    rel_path = os.path.relpath(root, lora_dir)
-                    if rel_path == ".":
-                        # File is in root directory
-                        root_files.append(filename)
-                    else:
-                        # File is in subdirectory
-                        subdir_files.append(os.path.join(rel_path, filename))
-        
-        # Sort root files alphabetically (case-insensitive)
-        root_files.sort(key=str.lower)
-        
-        # Sort subdirectory files by path (case-insensitive)
-        subdir_files.sort(key=lambda x: tuple(part.lower() for part in os.path.normpath(x).split(os.sep)))
-        
-        # Combine root files and subdirectory files
-        return root_files + subdir_files
+            open_url_btn.click(
+                fn=None,
+                inputs=[url_display],
+                outputs=None,
+                _js=open_url_js,
+            )
 
-    def get_trained_words(self, lora_file):
-        # Return empty string if no file is selected or empty string is selected
-        if not lora_file:
-            return gr.update(value="")
+            clear_cache_btn.click(
+                fn=self.clear_cache,
+                outputs=[adv_status],
+            )
 
-        # Construct full path using os.path.join to handle subdirectories correctly
-        full_path = os.path.join(shared.cmd_opts.lora_dir, lora_file)
-        
-        try:
-            with open(full_path, "rb") as f:
-                file_hash = hashlib.sha256(f.read()).hexdigest()
-        except FileNotFoundError:
-            print(f"File not found: {full_path}")
-            return gr.update(value="Error: File not found")
-        except Exception as e:
-            print(f"Error reading file {full_path}: {e}")
-            return gr.update(value="Error reading file")
+            fetch_all_btn.click(
+                fn=self.fetch_all_metadata,
+                outputs=[adv_status],
+            )
 
-        print(f"Selected {lora_file}, file hash: {file_hash}")
+        return [lora_dropdown, trained_words_display, hash_display, url_display]
 
-        json_file_path = os.path.join(known_dir, f"{file_hash}.json")
 
-        # Check if the JSON file exists
-        if os.path.exists(json_file_path):
-            # Load trained words from the JSON file
-            with open(json_file_path, "r") as f:
-                words = json.load(f) or []
-            words = [w for w in words if w.strip()]
-            print(f"Found cached keywords for {lora_file}: {words}")
-            if not words:  # If cached words array is empty
-                return gr.update(value="No keywords provided for this LoRA")
-            return gr.update(value=', '.join(words))
-
-        # If the JSON file does not exist, fetch from the API
-        api_url = f"https://civitai.com/api/v1/model-versions/by-hash/{file_hash}"
-
-        try:
-            response = requests.get(api_url)
-            if response.status_code == 200:
-                data = response.json()
-                words = data.get("trainedWords") or []
-                words = [w for w in words if w.strip()]
-                
-                if not words:
-                    print(f"No keywords found for {lora_file}")
-                    with open(json_file_path, "w") as f:
-                        json.dump(words, f)
-                    return gr.update(value="No keywords provided for this LoRA")
-                
-                words = [self.normalize_keyword(word) for word in words]
-                print(f"Fetched {len(words)} keywords for {lora_file}")
-                
-                with open(json_file_path, "w") as f:
-                    json.dump(words, f)
-                
-                return gr.update(value=', '.join(words))
-            else:
-                print(f"API request failed with status code {response.status_code}")
-                return gr.update(value="Failed to fetch keywords from CivitAI API")
-        except Exception as e:
-            print(f"Error fetching trained words: {e}")
-            return gr.update(value="Error fetching keywords")
