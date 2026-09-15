@@ -22,7 +22,7 @@ def load_config():
                 return json.load(f)
         except Exception:
             pass
-    return {"show_images": True, "show_advanced": True, "gallery_mode": "Official", "skip_dialog": False}
+    return {"show_images": True, "show_advanced": True, "gallery_mode": "Official", "skip_dialog": False, "follow_symlinks": False}
 
 
 def save_config(config):
@@ -169,8 +169,9 @@ class LoraKeywordsFinder(scripts.Script):
 
     def _list_lora_files(self):
         lora_dir = shared.cmd_opts.lora_dir
+        follow_symlinks = load_config().get("follow_symlinks", False)
         root_files, subdir_files = [], []
-        for root, _, files in os.walk(lora_dir):
+        for root, _, files in os.walk(lora_dir, followlinks=follow_symlinks):
             for filename in files:
                 if filename.lower().endswith(
                     (
@@ -861,6 +862,12 @@ class LoraKeywordsFinder(scripts.Script):
                         do_not_save_to_config=True,
                         elem_classes=["lkf-margin-cb"],
                     )
+                    follow_symlinks_cb = gr.Checkbox(
+                        label="Follow symbolic links",
+                        value=lambda: load_config().get("follow_symlinks", False),
+                        do_not_save_to_config=True,
+                        elem_classes=["lkf-margin-cb"],
+                    )
 
                 with gr.Row():
                     clear_cache_btn = gr.Button("🗑️ Clear Cache", variant="secondary")
@@ -910,6 +917,21 @@ class LoraKeywordsFinder(scripts.Script):
                 fn=on_skip_dialog_change,
                 inputs=[skip_dialog_cb],
                 outputs=[skip_dialog_bridge],
+            )
+
+            def on_follow_symlinks_change(follow):
+                cfg = load_config()
+                cfg["follow_symlinks"] = follow
+                save_config(cfg)
+                # Reload the file list immediately so new symlinked dirs appear
+                files = self._list_lora_files()
+                choices = [""] + files
+                return gr.update(choices=choices, label=f"File ({len(files)} available)", value="")
+
+            follow_symlinks_cb.change(
+                fn=on_follow_symlinks_change,
+                inputs=[follow_symlinks_cb],
+                outputs=[lora_dropdown],
             )
 
             def on_show_images_change(lora_file, show_images, gallery_mode):
