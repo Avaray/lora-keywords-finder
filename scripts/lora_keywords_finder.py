@@ -94,16 +94,30 @@ class LoraKeywordsFinder(scripts.Script):
         model_name = api_data.get("model", {}).get("name")
         words = api_data.get("trainedWords") or []
         words = [self._normalize_keyword(w) for w in words if w.strip()]
+        
+        base_model = api_data.get("baseModel")
+        model_type = api_data.get("model", {}).get("type")
+        
+        download_url = None
+        file_hash_upper = file_hash.upper()
+        for f in api_data.get("files", []):
+            if f.get("hashes", {}).get("SHA256", "").upper() == file_hash_upper:
+                download_url = f.get("downloadUrl")
+                break
+        if not download_url and api_data.get("files"):
+            download_url = api_data.get("files")[0].get("downloadUrl")
+
         return {
             "hash": file_hash,
             "model_id": model_id,
             "version_id": version_id,
             "model_name": model_name,
             "model_url": model_url,
+            "download_url": download_url,
+            "base_model": base_model,
+            "model_type": model_type,
             "keywords": words,
-            "images": [
-                img.get("url") for img in api_data.get("images", []) if img.get("url")
-            ][:3],
+            "images": [img.get("url") for img in api_data.get("images", []) if img.get("url")][:3],
             "not_found": False,
         }
 
@@ -642,10 +656,10 @@ class LoraKeywordsFinder(scripts.Script):
                     scale=1,
                 )
                 copy_dl_url_btn = gr.Button(
-                    "", elem_classes=["lkf-btn-copy", "tool"], scale=0, min_width=40
+                    "📋", elem_classes=["lkf-btn-copy", "tool"], scale=0, min_width=40
                 )
                 open_dl_url_btn = gr.Button(
-                    "", elem_classes=["lkf-btn-open-browser", "tool"], scale=0, min_width=40
+                    "🌐", elem_classes=["lkf-btn-open-browser", "tool"], scale=0, min_width=40
                 )
 
             # ── Row 5: SHA-256 hash [📋 copy] [🔍 open API] ──────────────────
