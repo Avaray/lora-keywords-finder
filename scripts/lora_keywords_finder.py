@@ -110,7 +110,7 @@ class LoraKeywordsFinder(scripts.Script):
         root_files, subdir_files = [], []
         for root, _, files in os.walk(lora_dir):
             for filename in files:
-                if filename.lower().endswith((".pt", ".safetensors")):
+                if filename.lower().endswith((".ckpt", ".gguf", ".onnx", ".pkl", ".pt", ".pth", ".safetensors" )):
                     rel_path = os.path.relpath(root, lora_dir)
                     if rel_path == ".":
                         root_files.append(filename)
