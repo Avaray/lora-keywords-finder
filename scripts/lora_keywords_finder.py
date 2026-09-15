@@ -3,7 +3,6 @@ import re
 import json
 import time
 import hashlib
-import importlib.util
 import requests
 import gradio as gr  # type: ignore
 from modules import scripts
@@ -11,25 +10,6 @@ from modules import shared
 
 known_dir = os.path.join(scripts.basedir(), "known")
 os.makedirs(known_dir, exist_ok=True)
-
-# ── Icon loader ────────────────────────────────────────────────────────────────
-# icons_loader.py lives in the extension root (one level above scripts/).
-try:
-    _icons_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "icons_loader.py")
-    _spec = importlib.util.spec_from_file_location("lkf_icons_loader", _icons_path)
-    _mod  = importlib.util.module_from_spec(_spec)
-    _spec.loader.exec_module(_mod)
-    svg_btn_label    = _mod.svg_btn_label
-    generate_icon_css = _mod.generate_icon_css
-    del _spec, _mod
-except Exception as _e:
-    print(f"[LoRA Keywords] icons_loader not available ({_e}); falling back to text labels")
-    def svg_btn_label(icon_name: str, text: str = "") -> str:  # type: ignore
-        return text if text else icon_name
-    def generate_icon_css() -> str:  # type: ignore
-        return ""
-    del _e
-
 
 CIVITAI_SINGLE_URL = "https://civitai.com/api/v1/model-versions/by-hash/{hash}"
 CIVITAI_BATCH_URL  = "https://civitai.com/api/v1/model-versions/by-hash"
@@ -502,13 +482,13 @@ class LoraKeywordsFinder(scripts.Script):
             with gr.Row(variant="compact"):
                 choices = [""] + self._list_lora_files()
                 lora_dropdown = gr.Dropdown(
-                    label="LoRA File",
+                    label="LoRA",
                     elem_id="lkf_lora_dropdown",
                     choices=choices,
                     value="",
                     type="value",
                 )
-                reload_loras = gr.Button(svg_btn_label("reload"), scale=0, elem_classes=["tool", "lkf-btn-reload"])
+                reload_loras = gr.Button("🔄", scale=0, elem_classes=["tool"])
 
             gr.HTML("<div style='height: 8px'></div>")
 
@@ -521,10 +501,10 @@ class LoraKeywordsFinder(scripts.Script):
                     placeholder="Select a LoRA to see its keywords…",
                 )
                 copy_kw_btn = gr.Button(
-                    svg_btn_label("copy"), scale=0, elem_classes=["tool", "lkf-btn-copy"], interactive=False
+                    "📋", scale=0, elem_classes=["tool"], interactive=False
                 )
                 copy_to_prompt_btn = gr.Button(
-                    svg_btn_label("send"), scale=0, elem_classes=["tool", "lkf-btn-send"], interactive=False
+                    "⚡️", scale=0, elem_classes=["tool"], interactive=False
                 )
 
             gr.HTML("<div style='height: 8px'></div>")
@@ -538,7 +518,7 @@ class LoraKeywordsFinder(scripts.Script):
                     placeholder="",
                 )
                 copy_name_btn = gr.Button(
-                    svg_btn_label("copy"), scale=0, elem_classes=["tool", "lkf-btn-copy"], interactive=False
+                    "📋", scale=0, elem_classes=["tool"], interactive=False
                 )
 
             gr.HTML("<div style='height: 8px'></div>")
@@ -552,15 +532,15 @@ class LoraKeywordsFinder(scripts.Script):
                     placeholder="",
                 )
                 copy_url_btn = gr.Button(
-                    svg_btn_label("copy"), scale=0, elem_classes=["tool", "lkf-btn-copy"], interactive=False
+                    "📋", scale=0, elem_classes=["tool"], interactive=False
                 )
                 open_url_btn = gr.Button(
-                    svg_btn_label("open-browser"), scale=0, elem_classes=["tool", "lkf-btn-open-browser"], interactive=False
+                    "🌐", scale=0, elem_classes=["tool"], interactive=False
                 )
 
             gr.HTML("<div style='height: 8px'></div>")
 
-            # ── Row 5: SHA-256 hash [📋 copy] [🌐 open API] ──────────────────
+            # ── Row 5: SHA-256 hash [📋 copy] [🔍 open API] ──────────────────
             with gr.Row(variant="compact"):
                 hash_display = gr.Textbox(
                     label="SHA-256",
@@ -569,10 +549,10 @@ class LoraKeywordsFinder(scripts.Script):
                     placeholder="",
                 )
                 copy_hash_btn = gr.Button(
-                    svg_btn_label("copy"), scale=0, elem_classes=["tool", "lkf-btn-copy"], interactive=False
+                    "📋", scale=0, elem_classes=["tool"], interactive=False
                 )
                 open_hash_btn = gr.Button(
-                    svg_btn_label("open-browser"), scale=0, elem_classes=["tool", "lkf-btn-open-browser"], interactive=False
+                    "🌐", scale=0, elem_classes=["tool"], interactive=False
                 )
 
             gr.HTML("<div style='height: 8px'></div>")
@@ -580,8 +560,8 @@ class LoraKeywordsFinder(scripts.Script):
             # ── Advanced Options ──────────────────────────────────────────────
             with gr.Accordion("⚙️ Advanced Options", open=False):
                 with gr.Row(variant="compact"):
-                    clear_cache_btn = gr.Button(svg_btn_label("clear", "Clear Cache"),        variant="secondary", elem_classes=["lkf-btn-clear"])
-                    fetch_all_btn   = gr.Button(svg_btn_label("download", "Fetch All Metadata"), variant="secondary", elem_classes=["lkf-btn-download"])
+                    clear_cache_btn = gr.Button("🗑️ Clear Cache",        variant="secondary")
+                    fetch_all_btn   = gr.Button("⬇️ Fetch All Metadata", variant="secondary")
                 gr.HTML("<div style='height: 8px'></div>")
                 adv_status = gr.Textbox(
                     show_label=False,
