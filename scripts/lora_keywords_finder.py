@@ -839,18 +839,43 @@ class LoraKeywordsFinder(scripts.Script):
                 outputs=[adv_fields_col],
             )
 
-            def on_show_images_change(lora_file, show_images):
+            def on_show_images_change(lora_file, show_images, gallery_mode):
                 save_config(
                     {
                         "show_images": show_images,
                         "show_advanced": load_config().get("show_advanced", True),
+                        "gallery_mode": gallery_mode,
                     }
                 )
-                return self.get_trained_words(lora_file, show_images)
+                return self.get_trained_words(lora_file, show_images, gallery_mode)
 
             show_images_cb.change(
                 fn=on_show_images_change,
-                inputs=[lora_dropdown, show_images_cb],
+                inputs=[lora_dropdown, show_images_cb, gallery_mode_rb],
+                outputs=[
+                    trained_words_display,
+                    name_display,
+                    base_model_display,
+                    model_type_display,
+                    url_display,
+                    download_url_display,
+                    hash_display,
+                    copy_kw_btn,
+                    copy_name_btn,
+                    copy_url_btn,
+                    copy_dl_url_btn,
+                    copy_hash_btn,
+                    copy_to_prompt_btn,
+                    open_url_btn,
+                    open_dl_url_btn,
+                    open_hash_btn,
+                    images_gallery,
+                ],
+            )
+
+            gallery_mode_rb.change(
+                fn=on_show_images_change,
+                inputs=[lora_dropdown, show_images_cb, gallery_mode_rb],
                 outputs=[
                     trained_words_display,
                     name_display,
@@ -874,7 +899,31 @@ class LoraKeywordsFinder(scripts.Script):
 
             lora_dropdown.change(
                 fn=self.get_trained_words,
-                inputs=[lora_dropdown, show_images_cb],
+                inputs=[lora_dropdown, show_images_cb, gallery_mode_rb],
+                outputs=[
+                    trained_words_display,
+                    name_display,
+                    base_model_display,
+                    model_type_display,
+                    url_display,
+                    download_url_display,
+                    hash_display,
+                    copy_kw_btn,
+                    copy_name_btn,
+                    copy_url_btn,
+                    copy_dl_url_btn,
+                    copy_hash_btn,
+                    copy_to_prompt_btn,
+                    open_url_btn,
+                    open_dl_url_btn,
+                    open_hash_btn,
+                    images_gallery,
+                ],
+            )
+
+            gallery_mode_rb.change(
+                fn=on_show_images_change,
+                inputs=[lora_dropdown, show_images_cb, gallery_mode_rb],
                 outputs=[
                     trained_words_display,
                     name_display,
