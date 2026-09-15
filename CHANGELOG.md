@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## 2.2.0 - 2026-09-15
+## [2.2.0] - 2026-09-15
 
 ### Added
 - **Extended Metadata Fields**: Introduced dedicated UI textboxes for "Base model", "Type", and "Download URL" providing deeper insight into loaded LoRA models.
@@ -21,7 +21,7 @@ All notable changes to this project will be documented in this file.
 - Restored Javascript click-bindings to newly added URL copy/browser buttons.
 - Fixed an issue causing ValueError crashing operations while toggling "Show example images" on a blank state.
 
-## 2.1.0 - 2026-09-15
+## [2.1.0] - 2026-09-15
 
 ### Added
 - **Example Images Preview** — extracts and caches up to 3 image URLs from the CivitAI API payload, displaying them as a clean, responsive horizontal strip directly in the UI. 
@@ -32,7 +32,8 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - The Advanced Options buttons (`Clear Cache` and `Fetch All Metadata`) now have rounded corners (`border-radius: 0.5em`) to match the style of action buttons in the UI.
 - Replaced the default Gradio `gr.Gallery` component with a highly customized HTML/CSS implementation for a much cleaner and more integrated look.
-## 2.0.0 - 2026-09-15
+
+## [2.0.0] - 2026-09-15
 
 ### Added
 - **Name field** — displays the model name fetched from CivitAI JSON (`model.name`), positioned between Keywords and CivitAI URL.
@@ -60,7 +61,7 @@ All notable changes to this project will be documented in this file.
 - JavaScript copy-guard (preventing error strings from being sent to the prompt) and URL validators updated to reflect all new message strings (`Not found on CivitAI`, `Not available`, etc.).
 - Missing `model_name` from CivitAI is gracefully handled by displaying `Not available`, maintaining UI consistency and correctly disabling action buttons.
 
-## 1.0.0 - 2024-01-01
+## [1.0.0] - 2024-01-01
 
 ### Added
 - Initial release.
