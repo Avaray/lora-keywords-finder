@@ -2,7 +2,7 @@
 
 ![Image of extension lora-keywords-finder](/public/image_of_extension.jpg "Image of extension lora-keywords-finder")
 
-This Extension lets you easily find trained words, example images, and metadata for your local [LoRA](https://en.wikipedia.org/wiki/LoRA_(machine_learning)) models by querying the [CivitAI API](https://developer.civitai.com/docs/api/public-rest).   
+This Extension lets you easily find trained keywords, example images, and metadata for your local [LoRA](https://en.wikipedia.org/wiki/LoRA_(machine_learning)) models by querying the [CivitAI API](https://developer.civitai.com/docs/api/public-rest).   
 
 Primarily created for [Forge Neo](https://github.com/Haoming02/sd-webui-forge-classic/tree/neo), it also should work with other UIs based on [AUTOMATIC1111](https://github.com/AUTOMATIC1111/stable-diffusion-webui).
 
@@ -45,3 +45,12 @@ Primarily created for [Forge Neo](https://github.com/Haoming02/sd-webui-forge-cl
 - The extension only works with models that are publicly available on [CivitAI](https://civitai.com/).
 - Prompts and keywords will only be returned if the author specified them during the model upload.
 - If the [CivitAI API](https://developer.civitai.com/site/reference/) goes down, new models cannot be fetched, but your previously cached models will continue to work perfectly.
+- The extension was tested with [Forge Neo 2.29.0](https://github.com/Haoming02/sd-webui-forge-classic/tree/neo) ([Gradio 4.40.0](https://gradio.app/changelog#4-40-0)).
+
+## 🧾 Changelog
+
+All notable changes to this project will be documented in the [CHANGELOG.md](CHANGELOG.md) file.
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
