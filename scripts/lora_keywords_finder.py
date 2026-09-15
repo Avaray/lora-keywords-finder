@@ -629,6 +629,8 @@ class LoraKeywordsFinder(scripts.Script):
                 base_model_display = gr.Textbox(label="Base model", interactive=False, max_lines=1)
                 model_type_display = gr.Textbox(label="Type", interactive=False, max_lines=1)
 
+            gr.HTML("<div style='height: 8px'></div>")
+
             # ── Row 4: CivitAI URL [📋 copy] [🌐 open] ───────────────────────
             with gr.Row(variant="compact"):
                 url_display = gr.Textbox(
@@ -661,6 +663,8 @@ class LoraKeywordsFinder(scripts.Script):
                 open_dl_url_btn = gr.Button(
                     "🌐", elem_classes=["lkf-btn-open-browser", "tool"], scale=0, min_width=40
                 )
+
+            gr.HTML("<div style='height: 8px'></div>")
 
             # ── Row 5: SHA-256 hash [📋 copy] [🔍 open API] ──────────────────
             with gr.Row(variant="compact"):
