@@ -71,8 +71,8 @@ All notable changes to this project will be documented in this file.
 - **⚡️ Copy to Prompt** button — appends fetched keywords to the active txt2img or img2img prompt textarea.
 - Support for ForgeUI and other AUTOMATIC1111-based UIs.
 
-[Unreleased]: https://github.com/Avaray/lora-keywords-finder/compare/v2.2.0...main
-[2.2.0]: https://github.com/Avaray/lora-keywords-finder/compare/v2.1.0...v2.2.0
-[2.1.0]: https://github.com/Avaray/lora-keywords-finder/compare/v2.0.0...v2.1.0
-[2.0.0]: https://github.com/Avaray/lora-keywords-finder/compare/v1.0.0...v2.0.0
-[1.0.0]: https://github.com/Avaray/lora-keywords-finder/releases/tag/v1.0.0
+[Unreleased]: https://github.com/Avaray/lora-keywords-finder/compare/0239519...main
+[2.2.0]: https://github.com/Avaray/lora-keywords-finder/compare/ead5668...0239519
+[2.1.0]: https://github.com/Avaray/lora-keywords-finder/compare/cb2d011...ead5668
+[2.0.0]: https://github.com/Avaray/lora-keywords-finder/compare/961a028...cb2d011
+[1.0.0]: https://github.com/Avaray/lora-keywords-finder/commit/961a028
