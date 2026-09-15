@@ -478,12 +478,12 @@ class LoraKeywordsFinder(scripts.Script):
             </style>""")
 
 
-            # ── Row 1: LoRA selector + reload ────────────────────────────────
+            # ── Row 1: File selector + reload ────────────────────────────────
 
             with gr.Row(variant="compact"):
                 choices = [""] + self._list_lora_files()
                 lora_dropdown = gr.Dropdown(
-                    label="LoRA",
+                    label="File",
                     elem_id="lkf_lora_dropdown",
                     choices=choices,
                     value="",
@@ -499,7 +499,7 @@ class LoraKeywordsFinder(scripts.Script):
                     label="Keywords",
                     interactive=False,
                     value="",
-                    placeholder="Select a LoRA to see its keywords…",
+                    placeholder="Select a file to find its keywords",
                 )
                 copy_kw_btn = gr.Button(
                     "📋", scale=0, elem_classes=["tool"], interactive=False
