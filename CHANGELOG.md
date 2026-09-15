@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+- Renamed the ambiguous `known/` cache directory to `metadata_cache/` for better project clarity.
+
+### Fixed
+- Fixed an issue where the "Base model" field (and other read-only textboxes) would erroneously display ghost data like "Unknown" on startup by explicitly blocking the WebUI from forcing cached `ui-config.json` values (`do_not_save_to_config=True`).
+
 ## [2.2.0] - 2026-09-15
 
 ### Added
