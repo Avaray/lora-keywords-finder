@@ -14,15 +14,21 @@ document.addEventListener("click", function(e) {
         const maxIndex = slides.length - 3;
         
         if (prevBtn) {
-            currentIndex = Math.max(0, currentIndex - 1); // Shift by 1
+            currentIndex = currentIndex - 1;
+            if (currentIndex < 0) currentIndex = maxIndex;
         } else if (nextBtn) {
-            currentIndex = Math.min(maxIndex, currentIndex + 1); // Shift by 1
+            currentIndex = currentIndex + 1;
+            if (currentIndex > maxIndex) currentIndex = 0;
         }
         
         container.setAttribute("data-current-index", currentIndex.toString());
         
         // Update slide visibility
         slides.forEach((slide, idx) => {
+            // Because it's an infinite loop without cloning nodes, we just wrap around visually by showing the right slides
+            // Actually, wait, if currentIndex + 3 exceeds the total, we need to wrap the visible slides around too!
+            // Wait, does it? If currentIndex = maxIndex, currentIndex + 3 is the exact length, so it's perfectly safe.
+            // maxIndex is slides.length - 3. So currentIndex + 3 is slides.length. It never goes out of bounds.
             if (idx >= currentIndex && idx < currentIndex + 3) {
                 slide.classList.add("lkf-visible");
             } else {
@@ -30,11 +36,11 @@ document.addEventListener("click", function(e) {
             }
         });
         
-        // Toggle arrow visibility
+        // Keep both arrows visible for infinite carousel
         const lBtn = container.querySelector(".left-arrow");
         const rBtn = container.querySelector(".right-arrow");
-        if (lBtn) lBtn.style.display = currentIndex > 0 ? "block" : "none";
-        if (rBtn) rBtn.style.display = currentIndex < maxIndex ? "block" : "none";
+        if (lBtn) lBtn.style.display = "block";
+        if (rBtn) rBtn.style.display = "block";
         
         return; // Event handled
     }

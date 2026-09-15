@@ -313,7 +313,7 @@ class LoraKeywordsFinder(scripts.Script):
             # Add carousel arrows
             arrows_html = ""
             if len(images) > 3:
-                arrows_html = '<div class="lkf-carousel-nav left-arrow" style="display: none;">◀</div><div class="lkf-carousel-nav right-arrow">▶</div>'
+                arrows_html = '<div class="lkf-carousel-nav left-arrow">◀</div><div class="lkf-carousel-nav right-arrow">▶</div>'
                 
             mode_label = "Community Images (Popular)" if gallery_mode == "Community" else "Official Example Images"
             html_content = f'<span style="display: block; font-size: 14px; font-weight: 500;">{mode_label}</span><div class="lkf-carousel-container" data-current-index="0">{img_tags}{arrows_html}</div>'
