@@ -251,28 +251,39 @@ class LoraKeywordsFinder(scripts.Script):
 
         name_str = entry.get("model_name") or MSG_NO_NAME
         name_has_data = name_str != MSG_NO_NAME
+        
+        base_model_str = entry.get("base_model") or MSG_NO_NAME
+        model_type_str = entry.get("model_type") or MSG_NO_NAME
 
         url_str = entry.get("model_url") or MSG_NO_URL
         url_has_data = bool(entry.get("model_url"))
+        
+        dl_url_str = entry.get("download_url") or MSG_NO_URL
+        dl_url_has_data = bool(entry.get("download_url"))
 
         return (
             gr.update(value=kw_str),
             gr.update(value=name_str),
-            gr.update(value=file_hash),
+            gr.update(value=base_model_str),
+            gr.update(value=model_type_str),
             gr.update(value=url_str),
+            gr.update(value=dl_url_str),
+            gr.update(value=file_hash),
             gr.update(interactive=kw_has_data),  # copy_kw_btn
             gr.update(interactive=name_has_data),  # copy_name_btn
-            gr.update(interactive=True),  # copy_hash_btn
             gr.update(interactive=url_has_data),  # copy_url_btn
+            gr.update(interactive=dl_url_has_data),  # copy_dl_url_btn
+            gr.update(interactive=True),  # copy_hash_btn
             gr.update(interactive=kw_has_data),  # copy_to_prompt_btn
             gr.update(interactive=url_has_data),  # open_url_btn
+            gr.update(interactive=dl_url_has_data),  # open_dl_url_btn
             gr.update(interactive=True),  # open_hash_btn
             gallery_update,
         )
 
     def _all_buttons_disabled(self):
         """Return disabled gr.updates for all 7 interactive buttons."""
-        return tuple(gr.update(interactive=False) for _ in range(7))
+        return tuple(gr.update(interactive=False) for _ in range(9))
 
     def reload_lora_list(self):
         files = self._list_lora_files()
@@ -286,9 +297,8 @@ class LoraKeywordsFinder(scripts.Script):
         copy_kw_btn, copy_name_btn, copy_hash_btn, copy_url_btn,
         copy_to_prompt_btn, open_url_btn, open_hash_btn)."""
         empty = (
-            gr.update(value=""),
-            gr.update(value=""),
-            gr.update(value=""),
+            gr.update(value=""), gr.update(value=""), gr.update(value=""),
+            gr.update(value=""), gr.update(value=""), gr.update(value=""),
             gr.update(value=""),
             *self._all_buttons_disabled(),
             gr.update(value="", visible=False),
@@ -303,9 +313,8 @@ class LoraKeywordsFinder(scripts.Script):
             print(f"[LoRA Keywords] File not found: {full_path}")
             return (
                 gr.update(value="Error: File not found"),
-                gr.update(value=""),
-                gr.update(value=""),
-                gr.update(value=""),
+                gr.update(value=""), gr.update(value=""), gr.update(value=""),
+                gr.update(value=""), gr.update(value=""), gr.update(value=""),
                 *self._all_buttons_disabled(),
                 gr.update(value="", visible=False),
             )
@@ -601,6 +610,11 @@ class LoraKeywordsFinder(scripts.Script):
 
             gr.HTML("<div style='height: 8px'></div>")
 
+            # ── Row 3.5: Base Model and Type ─────────────────────────────────────
+            with gr.Row():
+                base_model_display = gr.Textbox(label="Base model", interactive=False, max_lines=1)
+                model_type_display = gr.Textbox(label="Type", interactive=False, max_lines=1)
+
             # ── Row 4: CivitAI URL [📋 copy] [🌐 open] ───────────────────────
             with gr.Row(variant="compact"):
                 url_display = gr.Textbox(
@@ -617,6 +631,22 @@ class LoraKeywordsFinder(scripts.Script):
                 )
 
             gr.HTML("<div style='height: 8px'></div>")
+
+            # ── Row 4.5: Download URL [📋 copy] [🌐 open] ──────────────────────
+            with gr.Row(variant="compact"):
+                download_url_display = gr.Textbox(
+                    label="Download URL",
+                    show_copy_button=False,
+                    interactive=False,
+                    max_lines=1,
+                    scale=1,
+                )
+                copy_dl_url_btn = gr.Button(
+                    "", elem_classes=["lkf-btn-copy", "tool"], scale=0, min_width=40
+                )
+                open_dl_url_btn = gr.Button(
+                    "", elem_classes=["lkf-btn-open-browser", "tool"], scale=0, min_width=40
+                )
 
             # ── Row 5: SHA-256 hash [📋 copy] [🔍 open API] ──────────────────
             with gr.Row(variant="compact"):
@@ -675,14 +705,19 @@ class LoraKeywordsFinder(scripts.Script):
                 outputs=[
                     trained_words_display,
                     name_display,
-                    hash_display,
+                    base_model_display,
+                    model_type_display,
                     url_display,
+                    download_url_display,
+                    hash_display,
                     copy_kw_btn,
                     copy_name_btn,
-                    copy_hash_btn,
                     copy_url_btn,
+                    copy_dl_url_btn,
+                    copy_hash_btn,
                     copy_to_prompt_btn,
                     open_url_btn,
+                    open_dl_url_btn,
                     open_hash_btn,
                     images_gallery,
                 ],
@@ -694,14 +729,19 @@ class LoraKeywordsFinder(scripts.Script):
                 outputs=[
                     trained_words_display,
                     name_display,
-                    hash_display,
+                    base_model_display,
+                    model_type_display,
                     url_display,
+                    download_url_display,
+                    hash_display,
                     copy_kw_btn,
                     copy_name_btn,
-                    copy_hash_btn,
                     copy_url_btn,
+                    copy_dl_url_btn,
+                    copy_hash_btn,
                     copy_to_prompt_btn,
                     open_url_btn,
+                    open_dl_url_btn,
                     open_hash_btn,
                     images_gallery,
                 ],
