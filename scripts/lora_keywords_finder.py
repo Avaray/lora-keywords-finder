@@ -267,7 +267,7 @@ class LoraKeywordsFinder(scripts.Script):
                                         # Dodajemy bezpieczny skrypt inline, przypisujac pos/neg i klikajac hidden button
                     onclick_js = "var p = document.querySelector('#lkf-hidden-pos textarea'); if(p) p.value = decodeURIComponent(this.getAttribute('data-pos')); var n = document.querySelector('#lkf-hidden-neg textarea'); if(n) n.value = decodeURIComponent(this.getAttribute('data-neg')); var b = document.getElementById('lkf-hidden-btn'); if(b) b.click();"
                     btn_style = "position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 16px; z-index: 10;"
-                    btn_html = f'<button style="{btn_style}" onmouseover="this.style.background=\'rgba(0,0,0,0.9)\'" onmouseout="this.style.background=\'rgba(0,0,0,0.6)\'" data-pos="{pos_enc}" data-neg="{neg_enc}" onclick="{onclick_js}" title="Send prompts to UI">📝</button>'
+                    btn_html = f'<div style="{btn_style}" onmouseover="this.style.background=\'rgba(0,0,0,0.9)\'" onmouseout="this.style.background=\'rgba(0,0,0,0.6)\'" data-pos="{pos_enc}" data-neg="{neg_enc}" onclick="{onclick_js}" title="Send prompts to UI">📝</div>'
                 
                 wrapper_style = "position: relative; flex: 1 1 0; max-width: 33.33%; overflow: hidden; border-radius: 0.5em;"
                 a_style = "display: block; width: 100%; height: 100%;"
