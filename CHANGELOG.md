@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.2.0] - 2026-09-15
+## 2.2.0 - 2026-09-15
 
 ### Added
 - **Extended Metadata Fields**: Introduced dedicated UI textboxes for "Base model", "Type", and "Download URL" providing deeper insight into loaded LoRA models.
