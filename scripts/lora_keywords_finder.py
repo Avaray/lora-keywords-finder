@@ -108,6 +108,7 @@ class LoraKeywordsFinder(scripts.Script):
 
         base_model = api_data.get("baseModel")
         model_type = api_data.get("model", {}).get("type")
+        licensing_fee = api_data.get("licensingFee")
 
         download_url = None
         file_hash_upper = file_hash.upper()
@@ -127,6 +128,7 @@ class LoraKeywordsFinder(scripts.Script):
             "download_url": download_url,
             "base_model": base_model,
             "model_type": model_type,
+            "licensing_fee": licensing_fee,
             "keywords": words,
             "images": [
                 {
@@ -369,6 +371,8 @@ class LoraKeywordsFinder(scripts.Script):
         if base_model_str.lower() == "unknown":
             base_model_str = ""
         model_type_str = entry.get("model_type") or ""
+        licensing_fee = entry.get("licensing_fee")
+        price_str = "Free" if licensing_fee is None else "Paid"
 
         url_str = entry.get("model_url") or MSG_NO_URL
         url_has_data = bool(entry.get("model_url"))
@@ -381,6 +385,7 @@ class LoraKeywordsFinder(scripts.Script):
             gr.update(value=name_str),
             gr.update(value=base_model_str),
             gr.update(value=model_type_str),
+            gr.update(value=price_str),
             gr.update(value=url_str),
             gr.update(value=dl_url_str),
             gr.update(value=file_hash),
@@ -750,6 +755,9 @@ class LoraKeywordsFinder(scripts.Script):
                     model_type_display = gr.Textbox(
                         label="Type", interactive=False, max_lines=1, do_not_save_to_config=True
                     )
+                    price_display = gr.Textbox(
+                        label="Price", interactive=False, max_lines=1, do_not_save_to_config=True
+                    )
 
                 gr.HTML("<div style='height: 8px'></div>")
 
@@ -910,6 +918,7 @@ class LoraKeywordsFinder(scripts.Script):
                     name_display,
                     base_model_display,
                     model_type_display,
+                    price_display,
                     url_display,
                     download_url_display,
                     hash_display,
@@ -934,6 +943,7 @@ class LoraKeywordsFinder(scripts.Script):
                     name_display,
                     base_model_display,
                     model_type_display,
+                    price_display,
                     url_display,
                     download_url_display,
                     hash_display,
@@ -958,6 +968,7 @@ class LoraKeywordsFinder(scripts.Script):
                     name_display,
                     base_model_display,
                     model_type_display,
+                    price_display,
                     url_display,
                     download_url_display,
                     hash_display,
@@ -982,6 +993,7 @@ class LoraKeywordsFinder(scripts.Script):
                     name_display,
                     base_model_display,
                     model_type_display,
+                    price_display,
                     url_display,
                     download_url_display,
                     hash_display,
