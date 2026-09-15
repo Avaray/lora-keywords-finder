@@ -15,9 +15,10 @@ CIVITAI_SINGLE_URL = "https://civitai.com/api/v1/model-versions/by-hash/{hash}"
 CIVITAI_BATCH_URL  = "https://civitai.com/api/v1/model-versions/by-hash"
 CIVITAI_MODEL_URL  = "https://civitai.com/models/{model_id}"
 
-MSG_NOT_ON_CIVITAI = "This LoRA was not found on CivitAI"
+MSG_NOT_ON_CIVITAI = "Not found on CivitAI"
 MSG_NO_KEYWORDS    = "No keywords provided for this LoRA"
-MSG_NO_URL         = "URL not available"
+MSG_NO_NAME        = "Not available"
+MSG_NO_URL         = "Not available"
 
 # Prefixes that should NOT be copied to the prompt
 _NON_COPYABLE_PREFIXES = (
@@ -199,8 +200,8 @@ class LoraKeywordsFinder(scripts.Script):
             kw_str       = ", ".join(words) if words else MSG_NO_KEYWORDS
             kw_has_data  = bool(words)
 
-        name_str      = entry.get("model_name") or ""
-        name_has_data = bool(name_str)
+        name_str      = entry.get("model_name") or MSG_NO_NAME
+        name_has_data = (name_str != MSG_NO_NAME)
 
         url_str      = entry.get("model_url") or MSG_NO_URL
         url_has_data = bool(entry.get("model_url"))
@@ -434,7 +435,7 @@ class LoraKeywordsFinder(scripts.Script):
         # JS: open the CivitAI model URL in a new browser tab
         open_url_js = """
         function openCivitaiUrl(url) {
-            if (!url || url.trim() === "" || url.trim() === "URL not available") return url;
+            if (!url || url.trim() === "" || url.trim() === "Not available") return url;
             window.open(url.trim(), '_blank');
             return url;
         }
