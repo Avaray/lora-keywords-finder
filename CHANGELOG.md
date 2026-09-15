@@ -4,11 +4,33 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- **Price field** — shows `Free` or `Paid` for each model based on the CivitAI `licensingFee` value.
+- **Community image carousel** — new "Community" gallery mode fetches the most-reacted community images for the selected model version from CivitAI (`withMeta=true`), filtered strictly by `modelVersionId` to show only images that used the exact version.
+- **Infinite background fetching** — while browsing the community carousel, the next page of images is pre-fetched silently in the background when approaching the last visible slide; images accumulate without resetting the current position.
+- **Skip paste prompt dialog** option in Advanced Options — when enabled, clicking a prompt button skips the overwrite-confirmation dialog and pastes immediately.
+- **Separate positive / negative prompt buttons** — replaced the single 📝 button on gallery images with two distinct buttons: 😇 for the positive prompt and 😈 for the negative prompt; each button only appears when its respective prompt exists; each targets only its own textarea.
+- **Follow symbolic links** option in Advanced Options — when enabled, the LoRA file scanner follows directory symlinks (e.g. NTFS junctions). Toggling it immediately refreshes the file dropdown. Disabled by default to avoid infinite loops on circular symlinks.
+
 ### Changed
-- Renamed the ambiguous `known/` cache directory to `metadata_cache/` for better project clarity.
+- Renamed the ambiguous `known/` cache directory to `metadata_cache/`.
+- Official example images limit raised from 3 to 21 cached per model.
+- Carousel upgraded to support infinite loop scrolling; community mode locks the right arrow while a background fetch is in progress to prevent duplicate slides.
+- CivitAI model URL now includes `?modelVersionId=<id>` to link directly to the selected version.
 
 ### Fixed
-- Fixed an issue where the "Base model" field (and other read-only textboxes) would erroneously display ghost data like "Unknown" on startup by explicitly blocking the WebUI from forcing cached `ui-config.json` values (`do_not_save_to_config=True`).
+- Fixed an issue where read-only textboxes (`Base model`, `Type`, etc.) would display ghost data like `Unknown` on startup because WebUI forced cached `ui-config.json` values.
+- Fixed the gallery mode radio button not being wired to UI update events (switching Official ↔ Community had no effect).
+- Fixed community image prompts being empty because the API was called without `withMeta=true`.
+- Fixed community images including unrelated model versions — images are now verified against `civitaiResources` before being shown.
+- Fixed the carousel showing duplicate slides when looping without exhausting all pages.
+- Fixed unequal horizontal spacing between `Base model`, `Type`, and `Price` fields caused by a redundant `margin-right` CSS class stacking with the container `gap`.
+- Fixed gallery images not rendering when switching back from a model that had no images (incorrect `display: none` persisting on the HTML element).
+- Fixed positive and negative prompt buttons overlapping on top of each other due to a stale `position: absolute` rule from a previously injected `<style>` tag surviving Gradio's "Reload UI".
+
+### Performance
+- Added `loading="lazy"` to all gallery images (initial and dynamically fetched), preventing the browser from downloading all hidden carousel slides simultaneously.
+- Replaced the O(n) `slides.forEach` on each carousel click with a targeted O(1) index-based toggle that only touches the 6 slides involved in each transition, eliminating lag that grew unboundedly as community images accumulated.
 
 ## [2.2.0] - 2026-09-15
 
