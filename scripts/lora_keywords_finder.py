@@ -22,7 +22,7 @@ def load_config():
                 return json.load(f)
         except Exception:
             pass
-    return {"show_images": True, "show_advanced": True, "gallery_mode": "Official"}
+    return {"show_images": True, "show_advanced": True, "gallery_mode": "Official", "skip_dialog": False}
 
 
 def save_config(config):
@@ -835,6 +835,12 @@ class LoraKeywordsFinder(scripts.Script):
                         value=lambda: load_config().get("show_advanced", True),
                         elem_classes=["lkf-margin-cb"],
                     )
+                    skip_dialog_cb = gr.Checkbox(
+                        label="Skip paste prompt dialog",
+                        value=lambda: load_config().get("skip_dialog", False),
+                        do_not_save_to_config=True,
+                        elem_classes=["lkf-margin-cb"],
+                    )
 
                 with gr.Row():
                     clear_cache_btn = gr.Button("🗑️ Clear Cache", variant="secondary")
@@ -848,6 +854,12 @@ class LoraKeywordsFinder(scripts.Script):
                     value="",
                     placeholder="Status will appear here…",
                 )
+                # Bridge element: JS reads this to check skip_dialog setting
+                skip_dialog_bridge = gr.HTML(
+                    value='<b class="lkf-cfg-skip-dialog">0</b>',
+                    visible=False,
+                    elem_classes=["lkf-hidden-bridge"],
+                )
 
             # ── Event handlers ────────────────────────────────────────────────
 
@@ -855,7 +867,7 @@ class LoraKeywordsFinder(scripts.Script):
                 save_config(
                     {
                         "show_images": load_config().get("show_images", True),
-                            "gallery_mode": load_config().get("gallery_mode", "Official"),
+                        "gallery_mode": load_config().get("gallery_mode", "Official"),
                         "show_advanced": show_adv,
                     }
                 )
@@ -865,6 +877,19 @@ class LoraKeywordsFinder(scripts.Script):
                 fn=on_show_adv_change,
                 inputs=[show_adv_fields_cb],
                 outputs=[adv_fields_col],
+            )
+
+            def on_skip_dialog_change(skip):
+                cfg = load_config()
+                cfg["skip_dialog"] = skip
+                save_config(cfg)
+                bridge_val = "1" if skip else "0"
+                return gr.update(value=f'<b class="lkf-cfg-skip-dialog">{bridge_val}</b>')
+
+            skip_dialog_cb.change(
+                fn=on_skip_dialog_change,
+                inputs=[skip_dialog_cb],
+                outputs=[skip_dialog_bridge],
             )
 
             def on_show_images_change(lora_file, show_images, gallery_mode):

@@ -145,16 +145,22 @@ document.addEventListener("click", function(e) {
     }
 
     let confirmOverwrite = true;
-    let hasExistingText = false;
-    [...allPos, ...allNeg].forEach(el => {
-        if (el && el.offsetParent !== null && el.value.trim() !== "") {
-            hasExistingText = true;
+    
+    // Check if user enabled "Skip paste prompt dialog" in Advanced Options
+    const skipDialogEl = document.querySelector('.lkf-cfg-skip-dialog');
+    const skipDialog = skipDialogEl?.textContent?.trim() === "1";
+    
+    if (!skipDialog) {
+        let hasExistingText = false;
+        [...allPos, ...allNeg].forEach(el => {
+            if (el && el.offsetParent !== null && el.value.trim() !== "") {
+                hasExistingText = true;
+            }
+        });
+        if (hasExistingText) {
+            confirmOverwrite = confirm("Do you want to overwrite your current prompts with the ones from this image?");
         }
-    });
-
-    if (hasExistingText) {
-        confirmOverwrite = confirm("Do you want to overwrite your current prompts with the ones from this image?");
-    }
+    } // end if (!skipDialog)
     
     if (confirmOverwrite) {
         let updatedCount = 0;
