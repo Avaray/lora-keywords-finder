@@ -596,7 +596,8 @@ class LoraKeywordsFinder(scripts.Script):
 
             # ── Advanced Options ──────────────────────────────────────────────
             with gr.Accordion("⚙️ Advanced Options", open=False):
-                with gr.Row(variant="compact"):
+                show_images_cb = gr.Checkbox(label="Show example images", value=load_config().get("show_images", True))
+                with gr.Row():
                     clear_cache_btn = gr.Button("🗑️ Clear Cache",        variant="secondary")
                     fetch_all_btn   = gr.Button("⬇️ Fetch All Metadata", variant="secondary")
                 gr.HTML("<div style='height: 8px'></div>")
