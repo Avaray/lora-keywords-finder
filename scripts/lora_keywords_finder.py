@@ -691,7 +691,7 @@ class LoraKeywordsFinder(scripts.Script):
 
             # ── Advanced Options ──────────────────────────────────────────────
             with gr.Accordion("⚙️ Advanced Options", open=False):
-                with gr.Row(wrap=True):
+                with gr.Row():
                     show_images_cb = gr.Checkbox(
                         label="Show example images",
                         value=load_config().get("show_images", True),
