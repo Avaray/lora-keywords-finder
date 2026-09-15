@@ -286,7 +286,7 @@ class LoraKeywordsFinder(scripts.Script):
                 except Exception as e:
                     print(f"[LoRA Keywords] Could not delete {fname}: {e}")
         print(f"[LoRA Keywords] Cache cleared: {removed} file(s) removed")
-        return gr.update(value=f"✅ Cache cleared — {removed} file(s) removed")
+        return gr.update(value=f"✔️ Cache cleared — {removed} file(s) removed")
 
     def fetch_all_metadata(self):
         """
@@ -319,7 +319,7 @@ class LoraKeywordsFinder(scripts.Script):
                 to_fetch[h] = lora_file
 
         if not to_fetch:
-            msg = f"✅ All {total} LoRA(s) already cached."
+            msg = f"✔️ All {total} LoRA(s) already cached."
             if hash_errors:
                 msg += f" ({hash_errors} file(s) could not be read)"
             yield gr.update(value=msg)
@@ -377,7 +377,7 @@ class LoraKeywordsFinder(scripts.Script):
             if self._load_cache(h) and self._load_cache(h).get("not_found")
         )
         found_count = done - not_found_count
-        parts = [f"✅ Done! Processed {done} LoRA(s)."]
+        parts = [f"✔️ Done! Processed {done} LoRA(s)."]
         parts.append(f"Found on CivitAI: {found_count}, not found: {not_found_count}.")
         if skipped:
             parts.append(f"Skipped (cached): {skipped}.")
