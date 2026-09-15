@@ -487,6 +487,10 @@ class LoraKeywordsFinder(scripts.Script):
             #lkf_lora_dropdown .wrap-inner { padding: 10px !important; }
             #lkf_lora_dropdown .wrap-inner input { margin: 0 !important; }
             .lkf-rounded-btn { border-radius: 0.5em !important; }
+            .lkf-custom-gallery { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: flex-start !important; gap: 8px !important; width: 100% !important; box-sizing: border-box !important; }
+            .lkf-custom-gallery a { flex: 1 1 0 !important; max-width: 33.33% !important; display: block !important; overflow: hidden !important; border-radius: 0.5em !important; transition: transform 0.2s ease, opacity 0.2s ease !important; }
+            .lkf-custom-gallery a:hover { transform: scale(1.02) !important; opacity: 0.9 !important; }
+            .lkf-custom-gallery img { width: 100% !important; height: 250px !important; object-fit: cover !important; display: block !important; }
             </style>""")
 
 
