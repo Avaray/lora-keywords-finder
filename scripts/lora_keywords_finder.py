@@ -264,7 +264,9 @@ class LoraKeywordsFinder(scripts.Script):
                 if pos_prompt or neg_prompt:
                     pos_enc = urllib.parse.quote(pos_prompt)
                     neg_enc = urllib.parse.quote(neg_prompt)
-                    btn_html = f'<button class="lkf-img-prompt-btn" data-pos="{pos_enc}" data-neg="{neg_enc}" onclick="lkfSendImagePrompts(this)" title="Send prompts to UI">📝</button>'
+                                        # Dodajemy bezpieczny skrypt inline, przypisujac pos/neg i klikajac hidden button
+                    onclick_js = "var p = document.querySelector('#lkf-hidden-pos textarea'); if(p) p.value = decodeURIComponent(this.getAttribute('data-pos')); var n = document.querySelector('#lkf-hidden-neg textarea'); if(n) n.value = decodeURIComponent(this.getAttribute('data-neg')); var b = document.getElementById('lkf-hidden-btn'); if(b) b.click();"
+                    btn_html = f'<button class="lkf-img-prompt-btn" data-pos="{pos_enc}" data-neg="{neg_enc}" onclick="{onclick_js}" title="Send prompts to UI">📝</button>'
                 
                 tag = f'<div class="lkf-img-wrapper"><a href="{url}" target="_blank"><img src="{url}"/></a>{btn_html}</div>'
                 img_tags_list.append(tag)
@@ -602,58 +604,8 @@ class LoraKeywordsFinder(scripts.Script):
             .lkf-custom-gallery img { width: 100% !important; height: 250px !important; object-fit: cover !important; display: block !important; }
             .lkf-img-wrapper { position: relative !important; flex: 1 1 0 !important; max-width: 33.33% !important; overflow: hidden !important; border-radius: 0.5em !important; }
             .lkf-img-wrapper a { display: block !important; width: 100% !important; height: 100% !important; }
-            .lkf-img-prompt-btn { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 14px; z-index: 10; transition: background 0.2s; }
-            .lkf-img-prompt-btn:hover { background: rgba(0,0,0,0.9); }
-            .lkf-base-model-row { gap: 1em !important; }
-            </style>
-<script>
-function lkfSendImagePrompts(btn) {
-    const pos = decodeURIComponent(btn.getAttribute("data-pos") || "");
-    const neg = decodeURIComponent(btn.getAttribute("data-neg") || "");
-    if (!pos && !neg) return;
-    
-    // Rozpoznanie aktywnej zakładki (txt2img / img2img)
-    const tabs = document.querySelector('#tabs');
-    if (!tabs) return;
-    const tabButtons = tabs.querySelectorAll('.tab-nav > button');
-    let activeTabIndex = 0; // Default txt2img
-    tabButtons.forEach((b, idx) => {
-        if (b.classList.contains('selected')) activeTabIndex = idx;
-    });
-
-    let posTextarea, negTextarea;
-    if (activeTabIndex === 0) {
-        posTextarea = document.querySelector('#txt2img_prompt textarea');
-        negTextarea = document.querySelector('#txt2img_neg_prompt textarea');
-    } else if (activeTabIndex === 1) {
-        posTextarea = document.querySelector('#img2img_prompt textarea');
-        negTextarea = document.querySelector('#img2img_neg_prompt textarea');
-    }
-
-    if (posTextarea || negTextarea) {
-        const curPos = (posTextarea ? posTextarea.value.trim() : "");
-        const curNeg = (negTextarea ? negTextarea.value.trim() : "");
-        
-        let confirmOverwrite = true;
-        if (curPos !== "" || curNeg !== "") {
-            confirmOverwrite = confirm("Do you want to overwrite your current prompts with the ones from this image?");
-        }
-        
-        if (confirmOverwrite) {
-            if (posTextarea) {
-                posTextarea.value = pos;
-                posTextarea.dispatchEvent(new Event('input', { bubbles: true }));
-                posTextarea.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-            if (negTextarea) {
-                negTextarea.value = neg;
-                negTextarea.dispatchEvent(new Event('input', { bubbles: true }));
-                negTextarea.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-        }
-    }
-}
-</script>""")
+            .lkf-img-prompt-btn { position: absolute !important; top: 6px !important; right: 6px !important; background: rgba(0,0,0,0.6) !important; color: white !important; border: none !important; border-radius: 4px !important; padding: 4px 8px !important; cursor: pointer !important; font-size: 16px !important; z-index: 10 !important; transition: background 0.2s !important; }
+            .lkf-img-prompt-btn:hover { background: rgba(0,0,0,0.9) !important; }""")
 
             # ── Row 1: File selector + reload ────────────────────────────────
 
