@@ -12,29 +12,34 @@ known_dir = os.path.join(scripts.basedir(), "known")
 os.makedirs(known_dir, exist_ok=True)
 config_file = os.path.join(scripts.basedir(), "config.json")
 
+
 def load_config():
     if os.path.exists(config_file):
         try:
             import json
+
             with open(config_file, "r") as f:
                 return json.load(f)
         except Exception:
             pass
     return {"show_images": True}
 
+
 def save_config(config):
     import json
+
     with open(config_file, "w") as f:
         json.dump(config, f)
 
+
 CIVITAI_SINGLE_URL = "https://civitai.com/api/v1/model-versions/by-hash/{hash}"
-CIVITAI_BATCH_URL  = "https://civitai.com/api/v1/model-versions/by-hash"
-CIVITAI_MODEL_URL  = "https://civitai.com/models/{model_id}"
+CIVITAI_BATCH_URL = "https://civitai.com/api/v1/model-versions/by-hash"
+CIVITAI_MODEL_URL = "https://civitai.com/models/{model_id}"
 
 MSG_NOT_ON_CIVITAI = "Not found on CivitAI"
-MSG_NO_KEYWORDS    = "No keywords provided for this LoRA"
-MSG_NO_NAME        = "Not available"
-MSG_NO_URL         = "Not available"
+MSG_NO_KEYWORDS = "No keywords provided for this LoRA"
+MSG_NO_NAME = "Not available"
+MSG_NO_URL = "Not available"
 
 # Prefixes that should NOT be copied to the prompt
 _NON_COPYABLE_PREFIXES = (
@@ -83,33 +88,35 @@ class LoraKeywordsFinder(scripts.Script):
             json.dump(entry, f, ensure_ascii=False, indent=2)
 
     def _build_entry_from_api(self, file_hash: str, api_data: dict) -> dict:
-        model_id   = api_data.get("modelId")
+        model_id = api_data.get("modelId")
         version_id = api_data.get("id")
-        model_url  = CIVITAI_MODEL_URL.format(model_id=model_id) if model_id else None
+        model_url = CIVITAI_MODEL_URL.format(model_id=model_id) if model_id else None
         model_name = api_data.get("model", {}).get("name")
         words = api_data.get("trainedWords") or []
         words = [self._normalize_keyword(w) for w in words if w.strip()]
         return {
-            "hash":       file_hash,
-            "model_id":   model_id,
+            "hash": file_hash,
+            "model_id": model_id,
             "version_id": version_id,
             "model_name": model_name,
-            "model_url":  model_url,
-            "keywords":   words,
-            "images":     [img.get("url") for img in api_data.get("images", []) if img.get("url")][:3],
-            "not_found":  False,
+            "model_url": model_url,
+            "keywords": words,
+            "images": [
+                img.get("url") for img in api_data.get("images", []) if img.get("url")
+            ][:3],
+            "not_found": False,
         }
 
     def _not_found_entry(self, file_hash: str) -> dict:
         return {
-            "hash":       file_hash,
-            "model_id":   None,
+            "hash": file_hash,
+            "model_id": None,
             "version_id": None,
             "model_name": None,
-            "model_url":  None,
-            "keywords":   [],
-            "images":     [],
-            "not_found":  True,
+            "model_url": None,
+            "keywords": [],
+            "images": [],
+            "not_found": True,
         }
 
     # ── Utilities ──────────────────────────────────────────────────────────────
@@ -126,7 +133,19 @@ class LoraKeywordsFinder(scripts.Script):
         root_files, subdir_files = [], []
         for root, _, files in os.walk(lora_dir):
             for filename in files:
-                if filename.lower().endswith((".bin", ".ckpt", ".gguf", ".onnx", ".pkl", ".pt", ".pth", ".pwf", ".safetensors" )):
+                if filename.lower().endswith(
+                    (
+                        ".bin",
+                        ".ckpt",
+                        ".gguf",
+                        ".onnx",
+                        ".pkl",
+                        ".pt",
+                        ".pth",
+                        ".pwf",
+                        ".safetensors",
+                    )
+                ):
                     rel_path = os.path.relpath(root, lora_dir)
                     if rel_path == ".":
                         root_files.append(filename)
@@ -142,7 +161,7 @@ class LoraKeywordsFinder(scripts.Script):
 
     def _fetch_single(self, file_hash: str) -> dict:
         """Fetch one hash from CivitAI. Raises RuntimeError on unexpected HTTP errors."""
-        url  = CIVITAI_SINGLE_URL.format(hash=file_hash)
+        url = CIVITAI_SINGLE_URL.format(hash=file_hash)
         resp = requests.get(url, timeout=15)
         if resp.status_code == 200:
             return self._build_entry_from_api(file_hash, resp.json())
@@ -206,7 +225,12 @@ class LoraKeywordsFinder(scripts.Script):
     def _entry_to_ui(self, entry: dict, file_hash: str, show_images: bool = True):
         images = entry.get("images", [])
         if images and show_images:
-            img_tags = "".join([f'<a href="{url}" target="_blank"><img src="{url}"/></a>' for url in images])
+            img_tags = "".join(
+                [
+                    f'<a href="{url}" target="_blank"><img src="{url}"/></a>'
+                    for url in images
+                ]
+            )
             html_content = f'<span style="display: block; font-size: 14px; font-weight: 500;">Example Images</span><div class="lkf-custom-gallery">{img_tags}</div>'
             gallery_update = gr.update(value=html_content, visible=True)
         else:
@@ -218,17 +242,17 @@ class LoraKeywordsFinder(scripts.Script):
                   copy_to_prompt_btn, open_url_btn, open_hash_btn)
         """
         if entry.get("not_found"):
-            kw_str       = MSG_NOT_ON_CIVITAI
-            kw_has_data  = False
+            kw_str = MSG_NOT_ON_CIVITAI
+            kw_has_data = False
         else:
-            words        = entry.get("keywords") or []
-            kw_str       = ", ".join(words) if words else MSG_NO_KEYWORDS
-            kw_has_data  = bool(words)
+            words = entry.get("keywords") or []
+            kw_str = ", ".join(words) if words else MSG_NO_KEYWORDS
+            kw_has_data = bool(words)
 
-        name_str      = entry.get("model_name") or MSG_NO_NAME
-        name_has_data = (name_str != MSG_NO_NAME)
+        name_str = entry.get("model_name") or MSG_NO_NAME
+        name_has_data = name_str != MSG_NO_NAME
 
-        url_str      = entry.get("model_url") or MSG_NO_URL
+        url_str = entry.get("model_url") or MSG_NO_URL
         url_has_data = bool(entry.get("model_url"))
 
         return (
@@ -236,13 +260,13 @@ class LoraKeywordsFinder(scripts.Script):
             gr.update(value=name_str),
             gr.update(value=file_hash),
             gr.update(value=url_str),
-            gr.update(interactive=kw_has_data),    # copy_kw_btn
+            gr.update(interactive=kw_has_data),  # copy_kw_btn
             gr.update(interactive=name_has_data),  # copy_name_btn
-            gr.update(interactive=True),            # copy_hash_btn
-            gr.update(interactive=url_has_data),   # copy_url_btn
-            gr.update(interactive=kw_has_data),    # copy_to_prompt_btn
-            gr.update(interactive=url_has_data),   # open_url_btn
-            gr.update(interactive=True),            # open_hash_btn
+            gr.update(interactive=True),  # copy_hash_btn
+            gr.update(interactive=url_has_data),  # copy_url_btn
+            gr.update(interactive=kw_has_data),  # copy_to_prompt_btn
+            gr.update(interactive=url_has_data),  # open_url_btn
+            gr.update(interactive=True),  # open_hash_btn
             gallery_update,
         )
 
@@ -253,15 +277,22 @@ class LoraKeywordsFinder(scripts.Script):
     def reload_lora_list(self):
         files = self._list_lora_files()
         choices = [""] + files
-        return gr.update(choices=choices, value="", label=f"File ({len(files)} available)")
+        return gr.update(
+            choices=choices, value="", label=f"File ({len(files)} available)"
+        )
 
     def get_trained_words(self, lora_file, show_images=True):
         """Returns (kw, name, hash, url,
-                    copy_kw_btn, copy_name_btn, copy_hash_btn, copy_url_btn,
-                    copy_to_prompt_btn, open_url_btn, open_hash_btn)."""
-        empty = (gr.update(value=""), gr.update(value=""),
-                 gr.update(value=""), gr.update(value=""),
-                 *self._all_buttons_disabled(), gr.update(value="", visible=False))
+        copy_kw_btn, copy_name_btn, copy_hash_btn, copy_url_btn,
+        copy_to_prompt_btn, open_url_btn, open_hash_btn)."""
+        empty = (
+            gr.update(value=""),
+            gr.update(value=""),
+            gr.update(value=""),
+            gr.update(value=""),
+            *self._all_buttons_disabled(),
+            gr.update(value="", visible=False),
+        )
         if not lora_file:
             return empty
 
@@ -270,14 +301,23 @@ class LoraKeywordsFinder(scripts.Script):
             file_hash = self._hash_file(full_path)
         except FileNotFoundError:
             print(f"[LoRA Keywords] File not found: {full_path}")
-            return (gr.update(value="Error: File not found"),
-                    gr.update(value=""), gr.update(value=""), gr.update(value=""),
-                    *self._all_buttons_disabled(), gr.update(value="", visible=False))
+            return (
+                gr.update(value="Error: File not found"),
+                gr.update(value=""),
+                gr.update(value=""),
+                gr.update(value=""),
+                *self._all_buttons_disabled(),
+                gr.update(value="", visible=False),
+            )
         except Exception as e:
             print(f"[LoRA Keywords] Error hashing {full_path}: {e}")
-            return (gr.update(value="Error reading file"),
-                    gr.update(value=""), gr.update(value=""), gr.update(value=""),
-                    *self._all_buttons_disabled())
+            return (
+                gr.update(value="Error reading file"),
+                gr.update(value=""),
+                gr.update(value=""),
+                gr.update(value=""),
+                *self._all_buttons_disabled(),
+            )
 
         print(f"[LoRA Keywords] Selected '{lora_file}', hash: {file_hash}")
 
@@ -294,8 +334,11 @@ class LoraKeywordsFinder(scripts.Script):
         except Exception as e:
             err = str(e)
             print(f"[LoRA Keywords] Fetch error for '{lora_file}': {err}")
-            msg = f"CivitAI API error ({err})" if err.startswith("HTTP") else \
-                  "Network error — could not reach CivitAI"
+            msg = (
+                f"CivitAI API error ({err})"
+                if err.startswith("HTTP")
+                else "Network error — could not reach CivitAI"
+            )
             return (
                 gr.update(value=msg),
                 gr.update(value=""),
@@ -329,8 +372,8 @@ class LoraKeywordsFinder(scripts.Script):
 
         yield gr.update(value=f"🔍 Hashing {total} file(s)…")
 
-        to_fetch   = {}  # {hash: lora_file} — only uncached ones
-        skipped    = 0
+        to_fetch = {}  # {hash: lora_file} — only uncached ones
+        skipped = 0
         hash_errors = 0
 
         for lora_file in lora_files:
@@ -359,14 +402,16 @@ class LoraKeywordsFinder(scripts.Script):
             f" (skipped {skipped} already cached)…"
         )
 
-        CHUNK_SIZE   = 100
-        all_hashes   = list(to_fetch.keys())
+        CHUNK_SIZE = 100
+        all_hashes = list(to_fetch.keys())
         total_chunks = (n_to_fetch + CHUNK_SIZE - 1) // CHUNK_SIZE
-        done         = 0
-        api_errors   = 0
+        done = 0
+        api_errors = 0
 
         for chunk_index in range(total_chunks):
-            chunk = all_hashes[chunk_index * CHUNK_SIZE: (chunk_index + 1) * CHUNK_SIZE]
+            chunk = all_hashes[
+                chunk_index * CHUNK_SIZE : (chunk_index + 1) * CHUNK_SIZE
+            ]
             yield gr.update(
                 value=f"⬇️ Batch {chunk_index + 1}/{total_chunks}"
                 f" ({len(chunk)} hashes) — fetching…"
@@ -394,14 +439,18 @@ class LoraKeywordsFinder(scripts.Script):
                     done += 1
             else:
                 for h in chunk:
-                    entry = self._build_entry_from_api(h, result_map[h]) \
-                            if h in result_map else self._not_found_entry(h)
+                    entry = (
+                        self._build_entry_from_api(h, result_map[h])
+                        if h in result_map
+                        else self._not_found_entry(h)
+                    )
                     self._save_cache(entry)
                     done += 1
 
         # Final summary
         not_found_count = sum(
-            1 for h in all_hashes
+            1
+            for h in all_hashes
             if self._load_cache(h) and self._load_cache(h).get("not_found")
         )
         found_count = done - not_found_count
@@ -496,8 +545,6 @@ class LoraKeywordsFinder(scripts.Script):
         """
 
         with gr.Accordion("🧙 LoRA Keywords Finder", open=False):
-
-
             # CSS: fix dropdown padding/margin to match textboxes
             gr.HTML("""<style>
             #lkf_lora_dropdown .wrap-inner { padding: 10px !important; }
@@ -506,7 +553,6 @@ class LoraKeywordsFinder(scripts.Script):
             .lkf-custom-gallery a { flex: 1 1 0 !important; max-width: 33.33% !important; display: block !important; overflow: hidden !important; border-radius: 0.5em !important; }
             .lkf-custom-gallery img { width: 100% !important; height: 250px !important; object-fit: cover !important; display: block !important; }
             </style>""")
-
 
             # ── Row 1: File selector + reload ────────────────────────────────
 
@@ -596,11 +642,19 @@ class LoraKeywordsFinder(scripts.Script):
 
             # ── Advanced Options ──────────────────────────────────────────────
             with gr.Accordion("⚙️ Advanced Options", open=False):
-                show_images_cb = gr.Checkbox(label="Show example images", value=load_config().get("show_images", True), elem_classes=["lkf-margin-cb"])
-                gr.HTML("<style>.lkf-margin-cb { margin-bottom: 12px !important; }</style>")
+                show_images_cb = gr.Checkbox(
+                    label="Show example images",
+                    value=load_config().get("show_images", True),
+                    elem_classes=["lkf-margin-cb"],
+                )
+                gr.HTML(
+                    "<style>.lkf-margin-cb { margin-bottom: 12px !important; }</style>"
+                )
                 with gr.Row():
-                    clear_cache_btn = gr.Button("🗑️ Clear Cache",        variant="secondary")
-                    fetch_all_btn   = gr.Button("⬇️ Fetch All Metadata", variant="secondary")
+                    clear_cache_btn = gr.Button("🗑️ Clear Cache", variant="secondary")
+                    fetch_all_btn = gr.Button(
+                        "⬇️ Fetch All Metadata", variant="secondary"
+                    )
                 gr.HTML("<div style='height: 8px'></div>")
                 adv_status = gr.Textbox(
                     show_label=False,
@@ -619,19 +673,37 @@ class LoraKeywordsFinder(scripts.Script):
                 fn=on_show_images_change,
                 inputs=[lora_dropdown, show_images_cb],
                 outputs=[
-                    trained_words_display, name_display, hash_display, url_display,
-                    copy_kw_btn, copy_name_btn, copy_hash_btn, copy_url_btn,
-                    copy_to_prompt_btn, open_url_btn, open_hash_btn, images_gallery,
-                ]
+                    trained_words_display,
+                    name_display,
+                    hash_display,
+                    url_display,
+                    copy_kw_btn,
+                    copy_name_btn,
+                    copy_hash_btn,
+                    copy_url_btn,
+                    copy_to_prompt_btn,
+                    open_url_btn,
+                    open_hash_btn,
+                    images_gallery,
+                ],
             )
 
             lora_dropdown.change(
                 fn=self.get_trained_words,
                 inputs=[lora_dropdown, show_images_cb],
                 outputs=[
-                    trained_words_display, name_display, hash_display, url_display,
-                    copy_kw_btn, copy_name_btn, copy_hash_btn, copy_url_btn,
-                    copy_to_prompt_btn, open_url_btn, open_hash_btn, images_gallery,
+                    trained_words_display,
+                    name_display,
+                    hash_display,
+                    url_display,
+                    copy_kw_btn,
+                    copy_name_btn,
+                    copy_hash_btn,
+                    copy_url_btn,
+                    copy_to_prompt_btn,
+                    open_url_btn,
+                    open_hash_btn,
+                    images_gallery,
                 ],
             )
 
@@ -699,5 +771,10 @@ class LoraKeywordsFinder(scripts.Script):
                 outputs=[adv_status],
             )
 
-        return [lora_dropdown, trained_words_display, name_display, hash_display, url_display]
-
+        return [
+            lora_dropdown,
+            trained_words_display,
+            name_display,
+            hash_display,
+            url_display,
+        ]
