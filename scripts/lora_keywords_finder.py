@@ -78,6 +78,12 @@ class LoraKeywordsFinder(scripts.Script):
             # Old format was a plain list — treat as stale
             if isinstance(data, list):
                 return None
+            # Migrate old model_url entries that lack ?modelVersionId
+            url = data.get("model_url") or ""
+            vid = data.get("version_id")
+            if url and vid and "modelVersionId" not in url:
+                data["model_url"] = f"{url}?modelVersionId={vid}"
+                self._save_cache(data)  # silently update the cache file
             return data
         except Exception:
             return None
@@ -90,7 +96,12 @@ class LoraKeywordsFinder(scripts.Script):
     def _build_entry_from_api(self, file_hash: str, api_data: dict) -> dict:
         model_id = api_data.get("modelId")
         version_id = api_data.get("id")
-        model_url = CIVITAI_MODEL_URL.format(model_id=model_id) if model_id else None
+        model_url = (
+            f"{CIVITAI_MODEL_URL.format(model_id=model_id)}?modelVersionId={version_id}"
+            if model_id and version_id
+            else CIVITAI_MODEL_URL.format(model_id=model_id) if model_id
+            else None
+        )
         model_name = api_data.get("model", {}).get("name")
         words = api_data.get("trainedWords") or []
         words = [self._normalize_keyword(w) for w in words if w.strip()]
