@@ -681,7 +681,7 @@ class LoraKeywordsFinder(scripts.Script):
                         elem_classes=["lkf-gap-right"],
                     )
                     model_type_display = gr.Textbox(
-                        label="Type", interactive=False, max_lines=1
+                        label="Type", interactive=False, max_lines=1, do_not_save_to_config=True
                     )
 
                 gr.HTML("<div style='height: 8px'></div>")
