@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.0] - 2026-09-15
+
+### Added
+- **Extended Metadata Fields**: Introduced dedicated UI textboxes for "Base model", "Type", and "Download URL" providing deeper insight into loaded LoRA models.
+- **Send Prompts from Images**: Clicking the 📝 overlay button directly on gallery images instantly routes their embedded generation prompts (both positive and negative) to your active txt2img or img2img fields, featuring an automatic overwrite-protection dialog.
+- **Advanced UI Toggle**: Added a persistent "Show advanced fields" checkbox within the settings block, enabling users to effortlessly collapse all technical metadata for a cleaner, minimalist interface.
+- Complete metadata caching architecture to automatically download and persist prompts and negative prompts securely along with new fields into `.json` cache files.
+
+### Changed
+- Refactored UI layout to utilize native `style.css` loading within the Forge extension root, bypassing aggressive Gradio 4/Svelte security constraints (DOMPurify).
+- Migrated global Javascript integration to an independent `lkf_gallery.js` file leveraging global event delegation, fully immunizing prompt operations against WebUI UI DOM stripping policies.
+
+### Fixed
+- Fixed an issue causing "Base model" fields to inappropriately display the literal text "Unknown" rather than appearing cleanly empty when API data was absent.
+- Resolved various component layout desyncs and visual collisions including dynamic visibility toggles remaining out-of-sync across independent tabs.
+- Re-established missing horizontal / vertical CSS gaps and fixed Flexbox layout bounds that incorrectly forced image buttons outside the bounds of their wrappers.
+- Restored Javascript click-bindings to newly added URL copy/browser buttons.
+- Fixed an issue causing ValueError crashing operations while toggling "Show example images" on a blank state.
+
 ## 2.1.0 - 2026-09-15
 
 ### Added
