@@ -481,7 +481,7 @@ class LoraKeywordsFinder(scripts.Script):
             gr.HTML("""<style>
             #lkf_lora_dropdown .wrap-inner { padding: 10px !important; }
             #lkf_lora_dropdown .wrap-inner input { margin: 0 !important; }
-        .lkf-rounded-btn { border-radius: 0.5em !important; }
+            .lkf-rounded-btn { border-radius: 0.5em !important; }
             </style>""")
 
 
