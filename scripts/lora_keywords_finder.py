@@ -94,10 +94,10 @@ class LoraKeywordsFinder(scripts.Script):
         model_name = api_data.get("model", {}).get("name")
         words = api_data.get("trainedWords") or []
         words = [self._normalize_keyword(w) for w in words if w.strip()]
-        
+
         base_model = api_data.get("baseModel")
         model_type = api_data.get("model", {}).get("type")
-        
+
         download_url = None
         file_hash_upper = file_hash.upper()
         for f in api_data.get("files", []):
@@ -120,10 +120,15 @@ class LoraKeywordsFinder(scripts.Script):
             "images": [
                 {
                     "url": img.get("url"),
-                    "prompt": img.get("meta", {}).get("prompt", "") if isinstance(img.get("meta"), dict) else "",
-                    "negativePrompt": img.get("meta", {}).get("negativePrompt", "") if isinstance(img.get("meta"), dict) else ""
+                    "prompt": img.get("meta", {}).get("prompt", "")
+                    if isinstance(img.get("meta"), dict)
+                    else "",
+                    "negativePrompt": img.get("meta", {}).get("negativePrompt", "")
+                    if isinstance(img.get("meta"), dict)
+                    else "",
                 }
-                for img in api_data.get("images", []) if img.get("url")
+                for img in api_data.get("images", [])
+                if img.get("url")
             ][:3],
             "not_found": False,
         }
@@ -247,6 +252,7 @@ class LoraKeywordsFinder(scripts.Script):
         images = entry.get("images", [])
         if images and show_images:
             import urllib.parse
+
             img_tags_list = []
             for item in images:
                 if isinstance(item, str):
@@ -256,20 +262,20 @@ class LoraKeywordsFinder(scripts.Script):
                     url = item.get("url", "")
                     pos_prompt = item.get("prompt", "")
                     neg_prompt = item.get("negativePrompt", "")
-                
+
                 if not url:
                     continue
-                
+
                 btn_html = ""
                 if pos_prompt or neg_prompt:
                     pos_enc = urllib.parse.quote(pos_prompt)
                     neg_enc = urllib.parse.quote(neg_prompt)
-                                        # Dodajemy bezpieczny skrypt inline, przypisujac pos/neg i klikajac hidden button
+                    # Dodajemy bezpieczny skrypt inline, przypisujac pos/neg i klikajac hidden button
                     btn_html = f'<div class="lkf-img-prompt-btn" data-pos="{pos_enc}" data-neg="{neg_enc}" title="Send prompts to UI">📝</div>'
-                
+
                 tag = f'<div class="lkf-img-wrapper"><a href="{url}" target="_blank"><img src="{url}"/></a>{btn_html}</div>'
                 img_tags_list.append(tag)
-            
+
             img_tags = "".join(img_tags_list)
             html_content = f'<span style="display: block; font-size: 14px; font-weight: 500;">Example Images</span><div class="lkf-custom-gallery">{img_tags}</div>'
             gallery_update = gr.update(value=html_content, visible=True)
@@ -291,14 +297,15 @@ class LoraKeywordsFinder(scripts.Script):
 
         name_str = entry.get("model_name") or MSG_NO_NAME
         name_has_data = name_str != MSG_NO_NAME
-        
+
         base_model_str = entry.get("base_model") or ""
-        if base_model_str.lower() == "unknown": base_model_str = ""
+        if base_model_str.lower() == "unknown":
+            base_model_str = ""
         model_type_str = entry.get("model_type") or ""
 
         url_str = entry.get("model_url") or MSG_NO_URL
         url_has_data = bool(entry.get("model_url"))
-        
+
         dl_url_str = entry.get("download_url") or MSG_NO_URL
         dl_url_has_data = bool(entry.get("download_url"))
 
@@ -338,8 +345,12 @@ class LoraKeywordsFinder(scripts.Script):
         copy_kw_btn, copy_name_btn, copy_hash_btn, copy_url_btn,
         copy_to_prompt_btn, open_url_btn, open_hash_btn)."""
         empty = (
-            gr.update(value=""), gr.update(value=""), gr.update(value=""),
-            gr.update(value=""), gr.update(value=""), gr.update(value=""),
+            gr.update(value=""),
+            gr.update(value=""),
+            gr.update(value=""),
+            gr.update(value=""),
+            gr.update(value=""),
+            gr.update(value=""),
             gr.update(value=""),
             *self._all_buttons_disabled(),
             gr.update(value="", visible=False),
@@ -354,8 +365,12 @@ class LoraKeywordsFinder(scripts.Script):
             print(f"[LoRA Keywords] File not found: {full_path}")
             return (
                 gr.update(value="Error: File not found"),
-                gr.update(value=""), gr.update(value=""), gr.update(value=""),
-                gr.update(value=""), gr.update(value=""), gr.update(value=""),
+                gr.update(value=""),
+                gr.update(value=""),
+                gr.update(value=""),
+                gr.update(value=""),
+                gr.update(value=""),
+                gr.update(value=""),
                 *self._all_buttons_disabled(),
                 gr.update(value="", visible=False),
             )
@@ -640,7 +655,9 @@ class LoraKeywordsFinder(scripts.Script):
 
             gr.HTML("<div style='height: 8px'></div>")
 
-            with gr.Column(visible=load_config().get("show_advanced", True)) as adv_fields_col:
+            with gr.Column(
+                visible=load_config().get("show_advanced", True)
+            ) as adv_fields_col:
                 # ── Row 3: Name [📋 copy] ─────────────────────────────────────────
                 with gr.Row(variant="compact"):
                     name_display = gr.Textbox(
@@ -657,8 +674,15 @@ class LoraKeywordsFinder(scripts.Script):
 
                 # ── Row 3.5: Base Model and Type ─────────────────────────────────────
                 with gr.Row(elem_classes=["lkf-base-model-row"]):
-                    base_model_display = gr.Textbox(label="Base model", interactive=False, max_lines=1, elem_classes=["lkf-gap-right"])
-                    model_type_display = gr.Textbox(label="Type", interactive=False, max_lines=1)
+                    base_model_display = gr.Textbox(
+                        label="Base model",
+                        interactive=False,
+                        max_lines=1,
+                        elem_classes=["lkf-gap-right"],
+                    )
+                    model_type_display = gr.Textbox(
+                        label="Type", interactive=False, max_lines=1
+                    )
 
                 gr.HTML("<div style='height: 8px'></div>")
 
@@ -689,10 +713,16 @@ class LoraKeywordsFinder(scripts.Script):
                         scale=1,
                     )
                     copy_dl_url_btn = gr.Button(
-                        "📋", elem_classes=["lkf-btn-copy", "tool"], scale=0, min_width=40
+                        "📋",
+                        elem_classes=["lkf-btn-copy", "tool"],
+                        scale=0,
+                        min_width=40,
                     )
                     open_dl_url_btn = gr.Button(
-                        "🌐", elem_classes=["lkf-btn-open-browser", "tool"], scale=0, min_width=40
+                        "🌐",
+                        elem_classes=["lkf-btn-open-browser", "tool"],
+                        scale=0,
+                        min_width=40,
                     )
 
                 gr.HTML("<div style='height: 8px'></div>")
@@ -749,17 +779,27 @@ class LoraKeywordsFinder(scripts.Script):
             # ── Event handlers ────────────────────────────────────────────────
 
             def on_show_adv_change(show_adv):
-                save_config({"show_images": load_config().get("show_images", True), "show_advanced": show_adv})
+                save_config(
+                    {
+                        "show_images": load_config().get("show_images", True),
+                        "show_advanced": show_adv,
+                    }
+                )
                 return gr.update(visible=show_adv)
 
             show_adv_fields_cb.change(
                 fn=on_show_adv_change,
                 inputs=[show_adv_fields_cb],
-                outputs=[adv_fields_col]
+                outputs=[adv_fields_col],
             )
 
             def on_show_images_change(lora_file, show_images):
-                save_config({"show_images": show_images, "show_advanced": load_config().get("show_advanced", True)})
+                save_config(
+                    {
+                        "show_images": show_images,
+                        "show_advanced": load_config().get("show_advanced", True),
+                    }
+                )
                 return self.get_trained_words(lora_file, show_images)
 
             show_images_cb.change(
@@ -858,7 +898,10 @@ class LoraKeywordsFinder(scripts.Script):
             )
 
             copy_dl_url_btn.click(
-                fn=None, inputs=[download_url_display], outputs=[], _js=copy_clipboard_js
+                fn=None,
+                inputs=[download_url_display],
+                outputs=[],
+                _js=copy_clipboard_js,
             )
 
             open_dl_url_btn.click(
