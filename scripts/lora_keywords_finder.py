@@ -117,7 +117,14 @@ class LoraKeywordsFinder(scripts.Script):
             "base_model": base_model,
             "model_type": model_type,
             "keywords": words,
-            "images": [img.get("url") for img in api_data.get("images", []) if img.get("url")][:3],
+            "images": [
+                {
+                    "url": img.get("url"),
+                    "prompt": img.get("meta", {}).get("prompt", "") if isinstance(img.get("meta"), dict) else "",
+                    "negativePrompt": img.get("meta", {}).get("negativePrompt", "") if isinstance(img.get("meta"), dict) else ""
+                }
+                for img in api_data.get("images", []) if img.get("url")
+            ][:3],
             "not_found": False,
         }
 
@@ -239,12 +246,30 @@ class LoraKeywordsFinder(scripts.Script):
     def _entry_to_ui(self, entry: dict, file_hash: str, show_images: bool = True):
         images = entry.get("images", [])
         if images and show_images:
-            img_tags = "".join(
-                [
-                    f'<a href="{url}" target="_blank"><img src="{url}"/></a>'
-                    for url in images
-                ]
-            )
+            import urllib.parse
+            img_tags_list = []
+            for item in images:
+                if isinstance(item, str):
+                    url = item
+                    pos_prompt, neg_prompt = "", ""
+                else:
+                    url = item.get("url", "")
+                    pos_prompt = item.get("prompt", "")
+                    neg_prompt = item.get("negativePrompt", "")
+                
+                if not url:
+                    continue
+                
+                btn_html = ""
+                if pos_prompt or neg_prompt:
+                    pos_enc = urllib.parse.quote(pos_prompt)
+                    neg_enc = urllib.parse.quote(neg_prompt)
+                    btn_html = f'<button class="lkf-img-prompt-btn" data-pos="{pos_enc}" data-neg="{neg_enc}" onclick="lkfSendImagePrompts(this)" title="Send prompts to UI">📝</button>'
+                
+                tag = f'<div class="lkf-img-wrapper"><a href="{url}" target="_blank"><img src="{url}"/></a>{btn_html}</div>'
+                img_tags_list.append(tag)
+            
+            img_tags = "".join(img_tags_list)
             html_content = f'<span style="display: block; font-size: 14px; font-weight: 500;">Example Images</span><div class="lkf-custom-gallery">{img_tags}</div>'
             gallery_update = gr.update(value=html_content, visible=True)
         else:
@@ -575,8 +600,60 @@ class LoraKeywordsFinder(scripts.Script):
             .lkf-custom-gallery { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: flex-start !important; gap: 8px !important; width: 100% !important; box-sizing: border-box !important; }
             .lkf-custom-gallery a { flex: 1 1 0 !important; max-width: 33.33% !important; display: block !important; overflow: hidden !important; border-radius: 0.5em !important; }
             .lkf-custom-gallery img { width: 100% !important; height: 250px !important; object-fit: cover !important; display: block !important; }
+            .lkf-img-wrapper { position: relative !important; flex: 1 1 0 !important; max-width: 33.33% !important; overflow: hidden !important; border-radius: 0.5em !important; }
+            .lkf-img-wrapper a { display: block !important; width: 100% !important; height: 100% !important; }
+            .lkf-img-prompt-btn { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 14px; z-index: 10; transition: background 0.2s; }
+            .lkf-img-prompt-btn:hover { background: rgba(0,0,0,0.9); }
             .lkf-base-model-row { gap: 1em !important; }
-            </style>""")
+            </style>
+<script>
+function lkfSendImagePrompts(btn) {
+    const pos = decodeURIComponent(btn.getAttribute("data-pos") || "");
+    const neg = decodeURIComponent(btn.getAttribute("data-neg") || "");
+    if (!pos && !neg) return;
+    
+    // Rozpoznanie aktywnej zakładki (txt2img / img2img)
+    const tabs = document.querySelector('#tabs');
+    if (!tabs) return;
+    const tabButtons = tabs.querySelectorAll('.tab-nav > button');
+    let activeTabIndex = 0; // Default txt2img
+    tabButtons.forEach((b, idx) => {
+        if (b.classList.contains('selected')) activeTabIndex = idx;
+    });
+
+    let posTextarea, negTextarea;
+    if (activeTabIndex === 0) {
+        posTextarea = document.querySelector('#txt2img_prompt textarea');
+        negTextarea = document.querySelector('#txt2img_neg_prompt textarea');
+    } else if (activeTabIndex === 1) {
+        posTextarea = document.querySelector('#img2img_prompt textarea');
+        negTextarea = document.querySelector('#img2img_neg_prompt textarea');
+    }
+
+    if (posTextarea || negTextarea) {
+        const curPos = (posTextarea ? posTextarea.value.trim() : "");
+        const curNeg = (negTextarea ? negTextarea.value.trim() : "");
+        
+        let confirmOverwrite = true;
+        if (curPos !== "" || curNeg !== "") {
+            confirmOverwrite = confirm("Do you want to overwrite your current prompts with the ones from this image?");
+        }
+        
+        if (confirmOverwrite) {
+            if (posTextarea) {
+                posTextarea.value = pos;
+                posTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                posTextarea.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            if (negTextarea) {
+                negTextarea.value = neg;
+                negTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                negTextarea.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+    }
+}
+</script>""")
 
             # ── Row 1: File selector + reload ────────────────────────────────
 
