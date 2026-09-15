@@ -22,7 +22,7 @@ def load_config():
                 return json.load(f)
         except Exception:
             pass
-    return {"show_images": True}
+    return {"show_images": True, "show_advanced": True}
 
 
 def save_config(config):
@@ -610,78 +610,79 @@ class LoraKeywordsFinder(scripts.Script):
 
             gr.HTML("<div style='height: 8px'></div>")
 
-            # ── Row 3: Name [📋 copy] ─────────────────────────────────────────
-            with gr.Row(variant="compact"):
-                name_display = gr.Textbox(
-                    label="Name",
-                    interactive=False,
-                    value="",
-                    placeholder="",
-                )
-                copy_name_btn = gr.Button(
-                    "📋", scale=0, elem_classes=["tool"], interactive=False
-                )
+            with gr.Column(visible=load_config().get("show_advanced", True)) as adv_fields_col:
+                # ── Row 3: Name [📋 copy] ─────────────────────────────────────────
+                with gr.Row(variant="compact"):
+                    name_display = gr.Textbox(
+                        label="Name",
+                        interactive=False,
+                        value="",
+                        placeholder="",
+                    )
+                    copy_name_btn = gr.Button(
+                        "📋", scale=0, elem_classes=["tool"], interactive=False
+                    )
 
-            gr.HTML("<div style='height: 8px'></div>")
+                gr.HTML("<div style='height: 8px'></div>")
 
-            # ── Row 3.5: Base Model and Type ─────────────────────────────────────
-            with gr.Row():
-                base_model_display = gr.Textbox(label="Base model", interactive=False, max_lines=1)
-                model_type_display = gr.Textbox(label="Type", interactive=False, max_lines=1)
+                # ── Row 3.5: Base Model and Type ─────────────────────────────────────
+                with gr.Row():
+                    base_model_display = gr.Textbox(label="Base model", interactive=False, max_lines=1)
+                    model_type_display = gr.Textbox(label="Type", interactive=False, max_lines=1)
 
-            gr.HTML("<div style='height: 8px'></div>")
+                gr.HTML("<div style='height: 8px'></div>")
 
-            # ── Row 4: CivitAI URL [📋 copy] [🌐 open] ───────────────────────
-            with gr.Row(variant="compact"):
-                url_display = gr.Textbox(
-                    label="CivitAI URL",
-                    interactive=False,
-                    value="",
-                    placeholder="",
-                )
-                copy_url_btn = gr.Button(
-                    "📋", scale=0, elem_classes=["tool"], interactive=False
-                )
-                open_url_btn = gr.Button(
-                    "🌐", scale=0, elem_classes=["tool"], interactive=False
-                )
+                # ── Row 4: CivitAI URL [📋 copy] [🌐 open] ───────────────────────
+                with gr.Row(variant="compact"):
+                    url_display = gr.Textbox(
+                        label="CivitAI URL",
+                        interactive=False,
+                        value="",
+                        placeholder="",
+                    )
+                    copy_url_btn = gr.Button(
+                        "📋", scale=0, elem_classes=["tool"], interactive=False
+                    )
+                    open_url_btn = gr.Button(
+                        "🌐", scale=0, elem_classes=["tool"], interactive=False
+                    )
 
-            gr.HTML("<div style='height: 8px'></div>")
+                gr.HTML("<div style='height: 8px'></div>")
 
-            # ── Row 4.5: Download URL [📋 copy] [🌐 open] ──────────────────────
-            with gr.Row(variant="compact"):
-                download_url_display = gr.Textbox(
-                    label="Download URL",
-                    show_copy_button=False,
-                    interactive=False,
-                    max_lines=1,
-                    scale=1,
-                )
-                copy_dl_url_btn = gr.Button(
-                    "📋", elem_classes=["lkf-btn-copy", "tool"], scale=0, min_width=40
-                )
-                open_dl_url_btn = gr.Button(
-                    "🌐", elem_classes=["lkf-btn-open-browser", "tool"], scale=0, min_width=40
-                )
+                # ── Row 4.5: Download URL [📋 copy] [🌐 open] ──────────────────────
+                with gr.Row(variant="compact"):
+                    download_url_display = gr.Textbox(
+                        label="Download URL",
+                        show_copy_button=False,
+                        interactive=False,
+                        max_lines=1,
+                        scale=1,
+                    )
+                    copy_dl_url_btn = gr.Button(
+                        "📋", elem_classes=["lkf-btn-copy", "tool"], scale=0, min_width=40
+                    )
+                    open_dl_url_btn = gr.Button(
+                        "🌐", elem_classes=["lkf-btn-open-browser", "tool"], scale=0, min_width=40
+                    )
 
-            gr.HTML("<div style='height: 8px'></div>")
+                gr.HTML("<div style='height: 8px'></div>")
 
-            # ── Row 5: SHA-256 hash [📋 copy] [🔍 open API] ──────────────────
-            with gr.Row(variant="compact"):
-                hash_display = gr.Textbox(
-                    label="SHA-256",
-                    interactive=False,
-                    value="",
-                    placeholder="",
-                )
-                copy_hash_btn = gr.Button(
-                    "📋", scale=0, elem_classes=["tool"], interactive=False
-                )
-                open_hash_btn = gr.Button(
-                    "🌐", scale=0, elem_classes=["tool"], interactive=False
-                )
+                # ── Row 5: SHA-256 hash [📋 copy] [🔍 open API] ──────────────────
+                with gr.Row(variant="compact"):
+                    hash_display = gr.Textbox(
+                        label="SHA-256",
+                        interactive=False,
+                        value="",
+                        placeholder="",
+                    )
+                    copy_hash_btn = gr.Button(
+                        "📋", scale=0, elem_classes=["tool"], interactive=False
+                    )
+                    open_hash_btn = gr.Button(
+                        "🌐", scale=0, elem_classes=["tool"], interactive=False
+                    )
 
-            gr.HTML("<div style='height: 8px'></div>")
+                gr.HTML("<div style='height: 8px'></div>")
 
             # ── Row 6: Image Gallery ─────────────────────────────────────────
             images_gallery = gr.HTML(visible=False)
@@ -690,11 +691,17 @@ class LoraKeywordsFinder(scripts.Script):
 
             # ── Advanced Options ──────────────────────────────────────────────
             with gr.Accordion("⚙️ Advanced Options", open=False):
-                show_images_cb = gr.Checkbox(
-                    label="Show example images",
-                    value=load_config().get("show_images", True),
-                    elem_classes=["lkf-margin-cb"],
-                )
+                with gr.Row(wrap=True):
+                    show_images_cb = gr.Checkbox(
+                        label="Show example images",
+                        value=load_config().get("show_images", True),
+                        elem_classes=["lkf-margin-cb"],
+                    )
+                    show_adv_fields_cb = gr.Checkbox(
+                        label="Show advanced fields",
+                        value=load_config().get("show_advanced", True),
+                        elem_classes=["lkf-margin-cb"],
+                    )
                 gr.HTML(
                     "<style>.lkf-margin-cb { margin-bottom: 12px !important; }</style>"
                 )
@@ -713,8 +720,18 @@ class LoraKeywordsFinder(scripts.Script):
 
             # ── Event handlers ────────────────────────────────────────────────
 
+            def on_show_adv_change(show_adv):
+                save_config({"show_images": load_config().get("show_images", True), "show_advanced": show_adv})
+                return gr.update(visible=show_adv)
+
+            show_adv_fields_cb.change(
+                fn=on_show_adv_change,
+                inputs=[show_adv_fields_cb],
+                outputs=[adv_fields_col]
+            )
+
             def on_show_images_change(lora_file, show_images):
-                save_config({"show_images": show_images})
+                save_config({"show_images": show_images, "show_advanced": load_config().get("show_advanced", True)})
                 return self.get_trained_words(lora_file, show_images)
 
             show_images_cb.change(
