@@ -469,12 +469,6 @@ class LoraKeywordsFinder(scripts.Script):
 
         with gr.Accordion("🧙 LoRA Keywords Finder", open=False):
 
-            # CSS: make the dropdown padding match the textboxes
-            gr.HTML("""<style>
-            #lkf_lora_dropdown { --block-label-padding: 0; }
-            #lkf_lora_dropdown .wrap { padding: var(--input-padding) !important; }
-            #lkf_lora_dropdown select { padding: 0 8px !important; }
-            </style>""")
 
             # ── Row 1: LoRA selector + reload ────────────────────────────────
             with gr.Row(variant="compact"):
@@ -550,7 +544,7 @@ class LoraKeywordsFinder(scripts.Script):
                     "📋", scale=0, elem_classes=["tool"], interactive=False
                 )
                 open_hash_btn = gr.Button(
-                    "🔍", scale=0, elem_classes=["tool"], interactive=False
+                    "🌐", scale=0, elem_classes=["tool"], interactive=False
                 )
 
             gr.HTML("<div style='height: 8px'></div>")
