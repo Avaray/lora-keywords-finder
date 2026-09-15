@@ -424,6 +424,7 @@ class LoraKeywordsFinder(scripts.Script):
             gr.update(value=""),
             gr.update(value=""),
             gr.update(value=""),
+            gr.update(value=""),
             *self._all_buttons_disabled(),
             gr.update(value="", visible=False),
         )
@@ -443,6 +444,7 @@ class LoraKeywordsFinder(scripts.Script):
                 gr.update(value=""),
                 gr.update(value=""),
                 gr.update(value=""),
+                gr.update(value=""),
                 *self._all_buttons_disabled(),
                 gr.update(value="", visible=False),
             )
@@ -453,7 +455,12 @@ class LoraKeywordsFinder(scripts.Script):
                 gr.update(value=""),
                 gr.update(value=""),
                 gr.update(value=""),
+                gr.update(value=""),
+                gr.update(value=""),
+                gr.update(value=""),
+                gr.update(value=""),
                 *self._all_buttons_disabled(),
+                gr.update(value="", visible=False),
             )
 
         print(f"[LoRA Keywords] Selected '{lora_file}', hash: {file_hash}")
@@ -479,9 +486,14 @@ class LoraKeywordsFinder(scripts.Script):
             return (
                 gr.update(value=msg),
                 gr.update(value=""),
-                gr.update(value=file_hash),
                 gr.update(value=""),
+                gr.update(value=""),
+                gr.update(value=""),
+                gr.update(value=""),
+                gr.update(value=""),
+                gr.update(value=file_hash),
                 *self._all_buttons_disabled(),
+                gr.update(value="", visible=False),
             )
 
     def clear_cache(self):
