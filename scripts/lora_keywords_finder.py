@@ -830,11 +830,11 @@ class LoraKeywordsFinder(scripts.Script):
             )
 
             copy_dl_url_btn.click(
-                fn=None, inputs=[download_url_display], outputs=[], js=copy_kw_js
+                fn=None, inputs=[download_url_display], outputs=[], _js=copy_clipboard_js
             )
 
             open_dl_url_btn.click(
-                fn=None, inputs=[download_url_display], outputs=[], js=open_url_js
+                fn=None, inputs=[download_url_display], outputs=[], _js=open_url_js
             )
 
             open_hash_btn.click(
