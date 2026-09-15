@@ -22,7 +22,7 @@ def load_config():
                 return json.load(f)
         except Exception:
             pass
-    return {"show_images": True, "show_advanced": True}
+    return {"show_images": True, "show_advanced": True, "gallery_mode": "Official"}
 
 
 def save_config(config):
@@ -218,6 +218,32 @@ class LoraKeywordsFinder(scripts.Script):
             return result
         return {}
 
+    
+    def _fetch_community_images(self, version_id: str) -> list:
+        import requests
+        try:
+            resp = requests.get(
+                f"https://civitai.com/api/v1/images?modelVersionId={version_id}&sort=Most%20Reactions&period=AllTime&limit=100",
+                timeout=5
+            )
+            if resp.status_code == 200:
+                items = resp.json().get("items", [])
+                valid_images = []
+                for item in items:
+                    meta = item.get("meta")
+                    if meta and meta.get("prompt"):
+                        valid_images.append({
+                            "url": item.get("url", ""),
+                            "prompt": meta.get("prompt", ""),
+                            "negativePrompt": meta.get("negativePrompt", "")
+                        })
+                    if len(valid_images) >= 21: # Keep 21
+                        break
+                return valid_images
+        except Exception as e:
+            print(f"[LoRA Keywords] Error fetching community images: {e}")
+        return []
+
     def _fetch_batch_chunk(self, chunk: list) -> tuple:
         """
         POST up to 100 hashes to the batch endpoint.
@@ -248,13 +274,19 @@ class LoraKeywordsFinder(scripts.Script):
 
     # ── UI action handlers ─────────────────────────────────────────────────────
 
-    def _entry_to_ui(self, entry: dict, file_hash: str, show_images: bool = True):
-        images = entry.get("images", [])
+    def _entry_to_ui(self, entry: dict, file_hash: str, show_images: bool = True, gallery_mode: str = "Official"):
+        images = []
+        if show_images:
+            if gallery_mode == "Community" and entry.get("version_id"):
+                images = self._fetch_community_images(entry.get("version_id"))
+            
+            if not images: # Fallback or Official mode
+                images = entry.get("images", [])
+        
         if images and show_images:
             import urllib.parse
-
             img_tags_list = []
-            for item in images:
+            for idx, item in enumerate(images):
                 if isinstance(item, str):
                     url = item
                     pos_prompt, neg_prompt = "", ""
@@ -263,21 +295,28 @@ class LoraKeywordsFinder(scripts.Script):
                     pos_prompt = item.get("prompt", "")
                     neg_prompt = item.get("negativePrompt", "")
 
-                if not url:
-                    continue
+                if not url: continue
 
                 btn_html = ""
                 if pos_prompt or neg_prompt:
                     pos_enc = urllib.parse.quote(pos_prompt)
                     neg_enc = urllib.parse.quote(neg_prompt)
-                    # Dodajemy bezpieczny skrypt inline, przypisujac pos/neg i klikajac hidden button
                     btn_html = f'<div class="lkf-img-prompt-btn" data-pos="{pos_enc}" data-neg="{neg_enc}" title="Send prompts to UI">📝</div>'
 
-                tag = f'<div class="lkf-img-wrapper"><a href="{url}" target="_blank"><img src="{url}"/></a>{btn_html}</div>'
+                # Carousel classes
+                visible_cls = " lkf-visible" if idx < 3 else ""
+                tag = f'<div class="lkf-carousel-slide{visible_cls}"><div class="lkf-img-wrapper"><a href="{url}" target="_blank"><img src="{url}"/></a>{btn_html}</div></div>'
                 img_tags_list.append(tag)
 
             img_tags = "".join(img_tags_list)
-            html_content = f'<span style="display: block; font-size: 14px; font-weight: 500;">Example Images</span><div class="lkf-custom-gallery">{img_tags}</div>'
+            
+            # Add carousel arrows
+            arrows_html = ""
+            if len(images) > 3:
+                arrows_html = '<div class="lkf-carousel-nav left-arrow" style="display: none;">◀</div><div class="lkf-carousel-nav right-arrow">▶</div>'
+                
+            mode_label = "Community Images (Popular)" if gallery_mode == "Community" else "Official Example Images"
+            html_content = f'<span style="display: block; font-size: 14px; font-weight: 500;">{mode_label}</span><div class="lkf-carousel-container" data-current-index="0">{img_tags}{arrows_html}</div>'
             gallery_update = gr.update(value=html_content, visible=True)
         else:
             gallery_update = gr.update(value="", visible=False)
@@ -340,7 +379,7 @@ class LoraKeywordsFinder(scripts.Script):
             choices=choices, value="", label=f"File ({len(files)} available)"
         )
 
-    def get_trained_words(self, lora_file, show_images=True):
+    def get_trained_words(self, lora_file, show_images=True, gallery_mode="Official"):
         """Returns (kw, name, hash, url,
         copy_kw_btn, copy_name_btn, copy_hash_btn, copy_url_btn,
         copy_to_prompt_btn, open_url_btn, open_hash_btn)."""
@@ -389,13 +428,13 @@ class LoraKeywordsFinder(scripts.Script):
         cached = self._load_cache(file_hash)
         if cached is not None:
             print(f"[LoRA Keywords] Loaded from cache for '{lora_file}'")
-            return self._entry_to_ui(cached, file_hash, show_images)
+            return self._entry_to_ui(cached, file_hash, show_images, gallery_mode)
 
         # Not cached — fetch from CivitAI
         try:
             entry = self._fetch_single(file_hash)
             self._save_cache(entry)
-            return self._entry_to_ui(entry, file_hash, show_images)
+            return self._entry_to_ui(entry, file_hash, show_images, gallery_mode)
         except Exception as e:
             err = str(e)
             print(f"[LoRA Keywords] Fetch error for '{lora_file}': {err}")
@@ -757,6 +796,12 @@ class LoraKeywordsFinder(scripts.Script):
                         value=lambda: load_config().get("show_images", True),
                         elem_classes=["lkf-margin-cb"],
                     )
+                    gallery_mode_rb = gr.Radio(
+                        choices=["Official", "Community"],
+                        value=lambda: load_config().get("gallery_mode", "Official"),
+                        label="Gallery Mode",
+                        elem_classes=["lkf-margin-cb"],
+                    )
                     show_adv_fields_cb = gr.Checkbox(
                         label="Show advanced fields",
                         value=lambda: load_config().get("show_advanced", True),
@@ -782,6 +827,7 @@ class LoraKeywordsFinder(scripts.Script):
                 save_config(
                     {
                         "show_images": load_config().get("show_images", True),
+                            "gallery_mode": load_config().get("gallery_mode", "Official"),
                         "show_advanced": show_adv,
                     }
                 )
