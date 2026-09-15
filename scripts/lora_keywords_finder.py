@@ -10,6 +10,22 @@ from modules import shared
 
 known_dir = os.path.join(scripts.basedir(), "known")
 os.makedirs(known_dir, exist_ok=True)
+config_file = os.path.join(scripts.basedir(), "config.json")
+
+def load_config():
+    if os.path.exists(config_file):
+        try:
+            import json
+            with open(config_file, "r") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {"show_images": True}
+
+def save_config(config):
+    import json
+    with open(config_file, "w") as f:
+        json.dump(config, f)
 
 CIVITAI_SINGLE_URL = "https://civitai.com/api/v1/model-versions/by-hash/{hash}"
 CIVITAI_BATCH_URL  = "https://civitai.com/api/v1/model-versions/by-hash"
@@ -187,9 +203,9 @@ class LoraKeywordsFinder(scripts.Script):
 
     # ── UI action handlers ─────────────────────────────────────────────────────
 
-    def _entry_to_ui(self, entry: dict, file_hash: str):
+    def _entry_to_ui(self, entry: dict, file_hash: str, show_images: bool = True):
         images = entry.get("images", [])
-        if images:
+        if images and show_images:
             img_tags = "".join([f'<a href="{url}" target="_blank"><img src="{url}"/></a>' for url in images])
             html_content = f'<span style="display: block; font-size: 14px; font-weight: 500;">Example Images</span><div class="lkf-custom-gallery">{img_tags}</div>'
             gallery_update = gr.update(value=html_content, visible=True)
@@ -239,7 +255,7 @@ class LoraKeywordsFinder(scripts.Script):
         choices = [""] + files
         return gr.update(choices=choices, value="", label=f"File ({len(files)} available)")
 
-    def get_trained_words(self, lora_file):
+    def get_trained_words(self, lora_file, show_images=True):
         """Returns (kw, name, hash, url,
                     copy_kw_btn, copy_name_btn, copy_hash_btn, copy_url_btn,
                     copy_to_prompt_btn, open_url_btn, open_hash_btn)."""
@@ -268,13 +284,13 @@ class LoraKeywordsFinder(scripts.Script):
         cached = self._load_cache(file_hash)
         if cached is not None:
             print(f"[LoRA Keywords] Loaded from cache for '{lora_file}'")
-            return self._entry_to_ui(cached, file_hash)
+            return self._entry_to_ui(cached, file_hash, show_images)
 
         # Not cached — fetch from CivitAI
         try:
             entry = self._fetch_single(file_hash)
             self._save_cache(entry)
-            return self._entry_to_ui(entry, file_hash)
+            return self._entry_to_ui(entry, file_hash, show_images)
         except Exception as e:
             err = str(e)
             print(f"[LoRA Keywords] Fetch error for '{lora_file}': {err}")
@@ -593,9 +609,23 @@ class LoraKeywordsFinder(scripts.Script):
 
             # ── Event handlers ────────────────────────────────────────────────
 
+            def on_show_images_change(lora_file, show_images):
+                save_config({"show_images": show_images})
+                return self.get_trained_words(lora_file, show_images)
+
+            show_images_cb.change(
+                fn=on_show_images_change,
+                inputs=[lora_dropdown, show_images_cb],
+                outputs=[
+                    trained_words_display, name_display, hash_display, url_display,
+                    copy_kw_btn, copy_name_btn, copy_hash_btn, copy_url_btn,
+                    copy_to_prompt_btn, open_url_btn, open_hash_btn, images_gallery,
+                ]
+            )
+
             lora_dropdown.change(
                 fn=self.get_trained_words,
-                inputs=[lora_dropdown],
+                inputs=[lora_dropdown, show_images_cb],
                 outputs=[
                     trained_words_display, name_display, hash_display, url_display,
                     copy_kw_btn, copy_name_btn, copy_hash_btn, copy_url_btn,
