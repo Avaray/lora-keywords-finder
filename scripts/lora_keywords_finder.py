@@ -328,9 +328,14 @@ class LoraKeywordsFinder(scripts.Script):
 
                 btn_html = ""
                 if pos_prompt or neg_prompt:
-                    pos_enc = urllib.parse.quote(pos_prompt)
-                    neg_enc = urllib.parse.quote(neg_prompt)
-                    btn_html = f'<div class="lkf-img-prompt-btn" data-pos="{pos_enc}" data-neg="{neg_enc}" title="Send prompts to UI">📝</div>'
+                    btn_html = '<div class="lkf-img-prompt-container">'
+                    if pos_prompt:
+                        pos_enc = urllib.parse.quote(pos_prompt)
+                        btn_html += f'<div class="lkf-img-prompt-btn lkf-pos-btn" data-pos="{pos_enc}" title="Send positive prompt to UI">😇</div>'
+                    if neg_prompt:
+                        neg_enc = urllib.parse.quote(neg_prompt)
+                        btn_html += f'<div class="lkf-img-prompt-btn lkf-neg-btn" data-neg="{neg_enc}" title="Send negative prompt to UI">😈</div>'
+                    btn_html += '</div>'
 
                 # Carousel classes
                 visible_cls = " lkf-visible" if idx < 3 else ""
@@ -704,7 +709,8 @@ class LoraKeywordsFinder(scripts.Script):
             .lkf-custom-gallery img { width: 100% !important; height: 250px !important; object-fit: cover !important; display: block !important; }
             .lkf-img-wrapper { position: relative !important; flex: 1 1 0 !important; max-width: 33.33% !important; overflow: hidden !important; border-radius: 0.5em !important; }
             .lkf-img-wrapper a { display: block !important; width: 100% !important; height: 100% !important; overflow: hidden !important; border-radius: 0.5em !important; }
-            .lkf-img-prompt-btn { position: absolute !important; top: 6px !important; right: 6px !important; background: rgba(0,0,0,0.6) !important; color: white !important; border: none !important; border-radius: 4px !important; padding: 4px 8px !important; cursor: pointer !important; font-size: 16px !important; z-index: 10 !important; transition: background 0.2s !important; }
+            .lkf-img-prompt-container { position: absolute !important; top: 6px !important; right: 6px !important; display: flex !important; gap: 4px !important; z-index: 10 !important; }
+.lkf-img-prompt-btn { background: rgba(0,0,0,0.6) !important; color: white !important; border: none !important; border-radius: 4px !important; padding: 4px 8px !important; cursor: pointer !important; font-size: 16px !important; transition: background 0.2s !important; }
             .lkf-img-prompt-btn:hover { background: rgba(0,0,0,0.9) !important; }""")
 
             # ── Row 1: File selector + reload ────────────────────────────────

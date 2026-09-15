@@ -68,9 +68,12 @@ document.addEventListener("click", function(e) {
                             }
                             
                             const url = item.url || "";
-                            const pos = encodeURIComponent(m.prompt || "");
-                            const neg = encodeURIComponent(m.negativePrompt || "");
-                            const btnHtml = `<div class="lkf-img-prompt-btn" data-pos="${pos}" data-neg="${neg}" title="Send prompts to UI">📝</div>`;
+                            const pos = m.prompt ? encodeURIComponent(m.prompt) : "";
+                            const neg = m.negativePrompt ? encodeURIComponent(m.negativePrompt) : "";
+                            let btnHtml = '<div class="lkf-img-prompt-container">';
+                            if (pos) btnHtml += `<div class="lkf-img-prompt-btn lkf-pos-btn" data-pos="${pos}" title="Send positive prompt to UI">😇</div>`;
+                            if (neg) btnHtml += `<div class="lkf-img-prompt-btn lkf-neg-btn" data-neg="${neg}" title="Send negative prompt to UI">😈</div>`;
+                            btnHtml += '</div>';
                             newHtml += `<div class="lkf-carousel-slide"><div class="lkf-img-wrapper"><a href="${url}" target="_blank"><img src="${url}"/></a>${btnHtml}</div></div>`;
                             added++;
                         });
@@ -125,11 +128,14 @@ document.addEventListener("click", function(e) {
 
     console.log("LKF: Image prompt button clicked!");
 
-    const pos = decodeURIComponent(btn.getAttribute("data-pos") || "");
-    const neg = decodeURIComponent(btn.getAttribute("data-neg") || "");
+    const isPosBtn = btn.classList.contains("lkf-pos-btn");
+    const isNegBtn = btn.classList.contains("lkf-neg-btn");
+
+    const pos = isPosBtn ? decodeURIComponent(btn.getAttribute("data-pos") || "") : null;
+    const neg = isNegBtn ? decodeURIComponent(btn.getAttribute("data-neg") || "") : null;
     
     if (!pos && !neg) {
-        console.warn("LKF: Both positive and negative prompts are empty for this image.");
+        console.warn("LKF: Prompt is empty for this button.");
         return;
     }
     
@@ -138,8 +144,10 @@ document.addEventListener("click", function(e) {
     const allPos = gradioApp.querySelectorAll('#txt2img_prompt textarea, #img2img_prompt textarea');
     const allNeg = gradioApp.querySelectorAll('#txt2img_neg_prompt textarea, #img2img_neg_prompt textarea');
     
-    if (allPos.length === 0 && allNeg.length === 0) {
-        console.error("LKF ERROR: Could not find any prompt textareas in the UI!");
+    const targets = isPosBtn ? allPos : allNeg;
+
+    if (targets.length === 0) {
+        console.error("LKF ERROR: Could not find corresponding prompt textareas in the UI!");
         alert("LKF Error: Could not locate prompt textareas in this WebUI version.");
         return;
     }
@@ -152,37 +160,29 @@ document.addEventListener("click", function(e) {
     
     if (!skipDialog) {
         let hasExistingText = false;
-        [...allPos, ...allNeg].forEach(el => {
+        targets.forEach(el => {
             if (el && el.offsetParent !== null && el.value.trim() !== "") {
                 hasExistingText = true;
             }
         });
         if (hasExistingText) {
-            confirmOverwrite = confirm("Do you want to overwrite your current prompts with the ones from this image?");
+            confirmOverwrite = confirm(`Do you want to overwrite your current ${isPosBtn ? 'positive' : 'negative'} prompt with the one from this image?`);
         }
     } // end if (!skipDialog)
     
     if (confirmOverwrite) {
         let updatedCount = 0;
-        allPos.forEach(posTextarea => {
-            if (posTextarea.offsetParent !== null) {
-                posTextarea.value = pos;
-                posTextarea.dispatchEvent(new Event('input', { bubbles: true }));
-                posTextarea.dispatchEvent(new Event('change', { bubbles: true }));
+        
+        targets.forEach(textarea => {
+            if (textarea.offsetParent !== null) {
+                textarea.value = isPosBtn ? pos : neg;
+                textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                textarea.dispatchEvent(new Event('change', { bubbles: true }));
                 updatedCount++;
             }
         });
         
-        allNeg.forEach(negTextarea => {
-            if (negTextarea.offsetParent !== null) {
-                negTextarea.value = neg;
-                negTextarea.dispatchEvent(new Event('input', { bubbles: true }));
-                negTextarea.dispatchEvent(new Event('change', { bubbles: true }));
-                updatedCount++;
-            }
-        });
-        
-        console.log(`LKF: Successfully updated ${updatedCount} prompt textareas!`);
+        console.log(`LKF: Successfully updated ${updatedCount} textareas!`);
     } else {
         console.log("LKF: User cancelled prompt overwrite.");
     }
