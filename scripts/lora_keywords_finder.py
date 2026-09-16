@@ -998,7 +998,7 @@ class LoraKeywordsFinder(scripts.Script):
         }
         """
 
-        with gr.Accordion("🧙 LoRA Keywords Finder", open=False):
+        with gr.Accordion("🧙 LoRA Keywords Finder", open=False, elem_id="lkf_container"):
             # CSS: fix dropdown padding/margin to match textboxes
             gr.HTML(
                 """<style>
@@ -1015,6 +1015,11 @@ class LoraKeywordsFinder(scripts.Script):
             .lkf-opt-row { row-gap: 8px !important; margin-bottom: 8px !important; }
             .lkf-opt-col { gap: 8px !important; }
             .lkf-opt-col .lkf-margin-cb { margin: 0 !important; }
+            .lkf-field label > span, 
+            .lkf-field span[data-testid="block-info"] {
+                margin-bottom: 4px !important;
+                display: inline-block !important;
+            }
             """
                 + option_tooltip_css()
                 + """
@@ -1029,6 +1034,7 @@ class LoraKeywordsFinder(scripts.Script):
                 lora_dropdown = gr.Dropdown(
                     label=f"File ({len(files)} available)",
                     elem_id="lkf_lora_dropdown",
+                    elem_classes=["lkf-field"],
                     choices=choices,
                     value="",
                     type="value",
@@ -1046,6 +1052,7 @@ class LoraKeywordsFinder(scripts.Script):
                     interactive=False,
                     value="",
                     placeholder="Select a file to find its keywords",
+                    elem_classes=["lkf-field"],
                 )
                 copy_kw_btn = gr.Button(
                     "📋", scale=0, elem_classes=["tool"], interactive=False
@@ -1066,6 +1073,7 @@ class LoraKeywordsFinder(scripts.Script):
                         interactive=False,
                         value="",
                         placeholder="",
+                        elem_classes=["lkf-field"],
                     )
                     copy_name_btn = gr.Button(
                         "📋", scale=0, elem_classes=["tool"], interactive=False
@@ -1079,18 +1087,21 @@ class LoraKeywordsFinder(scripts.Script):
                         label="Base model",
                         interactive=False,
                         max_lines=1,
+                        elem_classes=["lkf-field"],
                     )
                     model_type_display = gr.Textbox(
                         label="Model Type",
                         interactive=False,
                         max_lines=1,
                         do_not_save_to_config=True,
+                        elem_classes=["lkf-field"],
                     )
                     price_display = gr.Textbox(
                         label="Access",
                         interactive=False,
                         max_lines=1,
                         do_not_save_to_config=True,
+                        elem_classes=["lkf-field"],
                     )
 
                 gr.HTML("<div style='height: 8px'></div>")
@@ -1102,6 +1113,7 @@ class LoraKeywordsFinder(scripts.Script):
                         interactive=False,
                         value="",
                         placeholder="",
+                        elem_classes=["lkf-field"],
                     )
                     copy_url_btn = gr.Button(
                         "📋", scale=0, elem_classes=["tool"], interactive=False
@@ -1120,6 +1132,7 @@ class LoraKeywordsFinder(scripts.Script):
                         interactive=False,
                         max_lines=1,
                         scale=1,
+                        elem_classes=["lkf-field"],
                     )
                     copy_dl_url_btn = gr.Button(
                         "📋",
@@ -1145,6 +1158,7 @@ class LoraKeywordsFinder(scripts.Script):
                         interactive=False,
                         value="",
                         placeholder="",
+                        elem_classes=["lkf-field"],
                     )
                     copy_hash_btn = gr.Button(
                         "📋", scale=0, elem_classes=["tool"], interactive=False
