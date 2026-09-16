@@ -8,7 +8,7 @@ This Extension lets you easily find trained keywords, example images, and metada
 
 - **Instant Keywords**: Fetches and lists the trained words associated with your models.
 - **Visual Previews**: Displays example images from CivitAI right in your WebUI.
-- **One-Click Prompts**: Click the 📝 button on any example image to instantly send its original positive and negative prompts directly to your active textboxes (txt2img/img2img).
+- **One-Click Prompts**: Each gallery image has a 😇 button to send its positive prompt and a 😈 button to send its negative prompt directly to your active textboxes (txt2img/img2img). A 🌐 button opens the original post on CivitAI.
 - **Deep Metadata**: Access the Base Model version, Model Type, direct Download URLs, and SHA-256 hashes. Hide them instantly with the minimalist view toggle.
 - **Smart Caching**: Fetched data is saved locally on your disk for instantaneous, offline access in the future.
 - **Format Support**: Works out of the box with `.safetensors`, `.ckpt`, `.pt`, `.gguf` and `.onnx` files.
