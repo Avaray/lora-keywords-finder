@@ -90,6 +90,27 @@ def plural(count: int, word: str, suffix: str = "s") -> str:
     return word if abs(count) == 1 else f"{word}{suffix}"
 
 
+def hashing_status_message(total: int) -> str:
+    """
+    Status text for the "hashing files" phase, scaled to how long it will
+    likely take so small libraries don't get an unnecessary "this may take
+    a while" caveat, and large ones get an honest heads-up.
+
+      1-49   -> no time estimate
+      50-199 -> "This may take a moment."
+      200-249-> "This may take a few minutes."
+      250+   -> "This may take a long time."
+    """
+    base = f"🔍 Hashing {total} {plural(total, 'file')}."
+    if total < 50:
+        return base
+    if total < 200:
+        return f"{base} This may take a moment."
+    if total < 250:
+        return f"{base} This may take a few minutes."
+    return f"{base} This may take a long time."
+
+
 def attr_text(text: str) -> str:
     """Escape text so it can be safely used inside an HTML attribute."""
     return html.escape(text, quote=True).replace("\n", "&#10;")
@@ -531,24 +552,43 @@ class LoraKeywordsFinder(scripts.Script):
     def _fetch_batch_chunk(self, chunk: list) -> tuple:
         """
         POST up to 100 hashes to the batch endpoint.
-        Retries once after 1 s on failure.
+
+        CivitAI expects the request body to be a bare JSON array of hash
+        strings (e.g. ["hash1", "hash2", ...]) — NOT an object like
+        {"hashes": [...]}. Sending the wrong shape gets every request
+        rejected with HTTP 400 ("expected array"), which used to make
+        batch mode silently fall back to per-hash requests every single
+        time instead of actually batching.
+
+        Retries once after 1 s on genuine failure.
         Returns (True, {lowercase_hash: api_object}) on HTTP 200,
-        or (False, {}) when both attempts fail.
+        or (False, {}) when both attempts fail for a real error.
+
         An empty result_map with success=True means none of the hashes
-        were found on CivitAI (not an error).
+        were found on CivitAI (not an error). CivitAI's by-hash endpoint
+        answers with HTTP 404 — instead of 200 + an empty body — when
+        *none* of the hashes in the request match anything, which is the
+        normal, expected outcome whenever a whole batch happens to consist
+        of LoRAs that just aren't on CivitAI. That case is treated as a
+        clean success here (no retry, no "failed" logging) so the UI never
+        reports it as a batch failure.
         """
         for attempt in range(2):
             try:
                 resp = requests.post(
                     CIVITAI_BATCH_URL,
-                    json={"hashes": chunk},
+                    json=chunk,
                     timeout=30,
                 )
                 if resp.status_code == 200:
                     return True, self._parse_batch_response(resp.json())
+                if resp.status_code == 404:
+                    # No hash in this batch matched anything on CivitAI —
+                    # not a failure, nothing to retry.
+                    return True, {}
                 print(
                     f"[🧙 LoRA Keywords Finder] Batch attempt {attempt + 1} failed:"
-                    f" HTTP {resp.status_code}"
+                    f" HTTP {resp.status_code} — {resp.text[:200]!r}"
                 )
             except Exception as e:
                 print(f"[🧙 LoRA Keywords Finder] Batch attempt {attempt + 1} exception: {e}")
@@ -701,11 +741,11 @@ class LoraKeywordsFinder(scripts.Script):
                 else ""
             )
             html_content = f'<span style="display: block; font-size: 14px; font-weight: 500;">{mode_label}</span><div class="lkf-carousel-container" data-current-index="0" {mode_attr}{version_id_attr}{next_page_attr}>{img_tags}{arrows_html}</div>'
-            gallery_update = (
-                gr.update(value=html_content, visible=True)
-                if img_tags_list
-                else gr.update(value="", visible=False)
-            )
+            if not img_tags_list:
+                msg = "Model not found on CivitAI." if entry.get("not_found") else "No example images found for this model."
+                html_content = f'<div style="padding: 20px; text-align: center; color: #888; border: 1px dashed #555; border-radius: 8px;">{msg}</div>'
+                
+            gallery_update = gr.update(value=html_content, visible=True)
         else:
             gallery_update = gr.update(value="", visible=False)
         """
@@ -888,7 +928,7 @@ class LoraKeywordsFinder(scripts.Script):
             yield gr.update(value="No LoRA files found.")
             return
 
-        yield gr.update(value=f"🔍 Hashing {total} {plural(total, 'file')}. This may take a moment.")
+        yield gr.update(value=hashing_status_message(total))
 
         to_fetch = {}  # {hash: lora_file} — only uncached ones
         skipped = 0
@@ -958,7 +998,8 @@ class LoraKeywordsFinder(scripts.Script):
                     f" {plural(len(chunk), 'hash', 'es')}"
                 )
                 yield gr.update(
-                    value=f"⚠️ Batch {chunk_index + 1} failed, retrying individually…"
+                    value=f"⚠️ Batch {chunk_index + 1} hit a snag — checking those"
+                    f" {len(chunk)} {plural(len(chunk), 'hash', 'es')} one by one…"
                 )
                 for h in chunk:
                     if self._cancel_fetch.is_set():
@@ -1115,6 +1156,10 @@ class LoraKeywordsFinder(scripts.Script):
             }
             .lkf-field textarea {
                 resize: none !important;
+            }
+            #lkf_fetch_all_btn {
+                white-space: nowrap !important;
+                flex-shrink: 0 !important;
             }
             """
                 + option_tooltip_css()
@@ -1319,7 +1364,9 @@ class LoraKeywordsFinder(scripts.Script):
                 with gr.Row():
                     clear_cache_btn = gr.Button("🗑️ Clear Cache", variant="secondary")
                     fetch_all_btn = gr.Button(
-                        "⬇️ Fetch All Metadata", variant="secondary"
+                        "⬇️ Fetch All Metadata",
+                        variant="secondary",
+                        elem_id="lkf_fetch_all_btn",
                     )
                     cancel_fetch_btn = gr.Button(
                         "⛔ Cancel", variant="stop", visible=False
