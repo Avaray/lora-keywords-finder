@@ -44,7 +44,7 @@ This Extension lets you easily find trained keywords, example images, and metada
 - The extension was tested with [Forge Neo 2.29.0](https://github.com/Haoming02/sd-webui-forge-classic/tree/neo) ([Gradio 4.40.0](https://gradio.app/changelog#4-40-0)) on Windows.
 - The extension only works with models that are publicly available on [CivitAI](https://civitai.com/). Currently, there are no other services that allow searching for models metadata by their hash values. If such services become available in the future, I will be happy to extend support beyond CivitAI.
 - If the [CivitAI API](https://developer.civitai.com/site/reference/) goes down, new data cannot be fetched, but your previously cached data will be available. In advanced options, you can download data for all models at once.
-- Prompts and keywords will only be returned if the author specified them during the model upload.
+- Prompts and keywords will only be returned if the author specified them during the model upload. Many authors forget to provide them and end up adding them later in the model description. In this situation, obtaining keywords is very difficult.
 
 ## 🧾 Changelog
 
