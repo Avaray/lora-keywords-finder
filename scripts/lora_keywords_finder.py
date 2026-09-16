@@ -20,8 +20,8 @@ symlink_wait_done = False
 
 DEFAULT_CONFIG = {
     "show_images": True,
-    "show_advanced": True,
-    "gallery_mode": "Official",
+    "show_advanced": False,
+    "include_community_images": False,
     "skip_dialog": False,
     "follow_symlinks": False,
 }
@@ -42,6 +42,14 @@ def load_config():
                 stored = json.load(f)
             if isinstance(stored, dict):
                 config.update(stored)
+                # Migrate the old "gallery_mode" radio setting ("Official" /
+                # "Community") to the "Include community images" checkbox.
+                if "gallery_mode" in config:
+                    if "include_community_images" not in stored:
+                        config["include_community_images"] = (
+                            config["gallery_mode"] == "Community"
+                        )
+                    config.pop("gallery_mode", None)
             else:
                 print(
                     "[LoRA Keywords] config.json has an unexpected format"
@@ -83,6 +91,52 @@ def plural(count: int, word: str, suffix: str = "s") -> str:
 def attr_text(text: str) -> str:
     """Escape text so it can be safely used inside an HTML attribute."""
     return html.escape(text, quote=True).replace("\n", "&#10;")
+
+
+# Hover tooltips for the Advanced Options checkboxes — edit the texts here.
+# "\n" inside a text becomes a line break in the tooltip.
+OPTION_TOOLTIPS = {
+    "show-adv-fields": "TODO: explain what 'Show advanced fields' does.",
+    "follow-symlinks": "TODO: explain what 'Follow symbolic links' does.",
+    "skip-dialog": "TODO: explain what 'Skip paste prompt dialog' does.",
+    "show-images": "TODO: explain what 'Show example images' does.",
+    "include-community": "TODO: explain what 'Include community images' does.",
+}
+
+
+def option_classes(key: str) -> list:
+    """elem_classes for an Advanced Options checkbox: spacing + tooltip hook."""
+    return ["lkf-margin-cb", "lkf-opt", f"lkf-opt-{key}"]
+
+
+def option_tooltip_css() -> str:
+    """
+    Build the hover-tooltip CSS from OPTION_TOOLTIPS.
+
+    Gradio components cannot carry a plain title="" attribute, so the text is
+    drawn with a ::after pseudo-element that fades in on hover.
+    """
+    rules = [
+        ".lkf-opt { position: relative !important; overflow: visible !important; }",
+        ".lkf-opt::after {"
+        " position: absolute !important; left: 0 !important; top: 100% !important;"
+        " z-index: 1000 !important; width: max-content !important;"
+        " max-width: 280px !important; padding: 6px 9px !important;"
+        " margin-top: 4px !important; border-radius: 6px !important;"
+        " background: rgba(0, 0, 0, 0.88) !important; color: #fff !important;"
+        " font-size: 12px !important; font-weight: 400 !important;"
+        " line-height: 1.4 !important; white-space: pre-wrap !important;"
+        " text-align: left !important; pointer-events: none !important;"
+        " opacity: 0 !important; visibility: hidden !important;"
+        " transition: opacity 0.15s ease !important; }",
+        ".lkf-opt:hover::after {"
+        " opacity: 1 !important; visibility: visible !important;"
+        " transition-delay: 0.4s !important; }",
+    ]
+    for key, text in OPTION_TOOLTIPS.items():
+        content = text.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\A ")
+        rules.append(f'.lkf-opt-{key}::after {{ content: "{content}" !important; }}')
+    return "\n            ".join(rules)
 
 
 CIVITAI_SINGLE_URL = "https://civitai.com/api/v1/model-versions/by-hash/{hash}"
@@ -448,23 +502,25 @@ class LoraKeywordsFinder(scripts.Script):
         entry: dict,
         file_hash: str,
         show_images: bool = True,
-        gallery_mode: str = "Official",
+        include_community: bool = False,
     ):
         images = []
         next_page_attr = ""
+        using_community = False
         if show_images:
-            if gallery_mode == "Community" and entry.get("version_id"):
+            if include_community and entry.get("version_id"):
                 images, next_page = self._fetch_community_images(
                     entry.get("version_id")
                 )
-                if next_page:
+                using_community = bool(images)
+                if next_page and using_community:
                     import urllib.parse
 
                     next_page_attr = (
                         f' data-next-page="{next_page.replace('"', "&quot;")}"'
                     )
 
-            if not images:  # Fallback or Official mode
+            if not images:  # No community images (or not requested) — use official
                 images = entry.get("images", [])
 
         if images and show_images:
@@ -514,13 +570,13 @@ class LoraKeywordsFinder(scripts.Script):
 
             mode_label = (
                 "Community Images (Popular)"
-                if gallery_mode == "Community"
+                if using_community
                 else "Images from the model's creator"
             )
-            mode_attr = 'data-mode="community"' if gallery_mode == "Community" else ""
+            mode_attr = 'data-mode="community"' if using_community else ""
             version_id_attr = (
                 f' data-version-id="{entry.get("version_id", "")}"'
-                if gallery_mode == "Community"
+                if using_community
                 else ""
             )
             html_content = f'<span style="display: block; font-size: 14px; font-weight: 500;">{mode_label}</span><div class="lkf-carousel-container" data-current-index="0" {mode_attr}{version_id_attr}{next_page_attr}>{img_tags}{arrows_html}</div>'
@@ -589,7 +645,7 @@ class LoraKeywordsFinder(scripts.Script):
             choices=choices, value="", label=f"File ({len(files)} available)"
         )
 
-    def get_trained_words(self, lora_file, show_images=True, gallery_mode="Official"):
+    def get_trained_words(self, lora_file, show_images=True, include_community=False):
         """Returns (kw, name, hash, url,
         copy_kw_btn, copy_name_btn, copy_hash_btn, copy_url_btn,
         copy_to_prompt_btn, open_url_btn, open_hash_btn)."""
@@ -645,13 +701,13 @@ class LoraKeywordsFinder(scripts.Script):
         cached = self._load_cache(file_hash)
         if cached is not None:
             print(f"[LoRA Keywords] Loaded from cache for '{lora_file}'")
-            return self._entry_to_ui(cached, file_hash, show_images, gallery_mode)
+            return self._entry_to_ui(cached, file_hash, show_images, include_community)
 
         # Not cached — fetch from CivitAI
         try:
             entry = self._fetch_single(file_hash)
             self._save_cache(entry)
-            return self._entry_to_ui(entry, file_hash, show_images, gallery_mode)
+            return self._entry_to_ui(entry, file_hash, show_images, include_community)
         except Exception as e:
             err = str(e)
             print(f"[LoRA Keywords] Fetch error for '{lora_file}': {err}")
@@ -888,7 +944,11 @@ class LoraKeywordsFinder(scripts.Script):
             .lkf-img-wrapper a { display: block !important; width: 100% !important; height: 100% !important; overflow: hidden !important; border-radius: 0.5em !important; }
             .lkf-img-prompt-container { position: absolute !important; top: 6px !important; right: 6px !important; display: flex !important; gap: 4px !important; z-index: 10 !important; }
 .lkf-img-prompt-container .lkf-img-prompt-btn { position: relative !important; top: auto !important; right: auto !important; background: rgba(0,0,0,0.6) !important; color: white !important; border: none !important; border-radius: 4px !important; padding: 4px 8px !important; cursor: pointer !important; font-size: 16px !important; transition: background 0.2s !important; }
-            .lkf-img-prompt-container .lkf-img-prompt-btn:hover { background: rgba(0,0,0,0.9) !important; }""")
+            .lkf-img-prompt-container .lkf-img-prompt-btn:hover { background: rgba(0,0,0,0.9) !important; }
+            .lkf-opt-col { gap: 8px !important; }
+            .lkf-margin-cb { margin: 8px 0 !important; }
+            """ + option_tooltip_css() + """
+            </style>""")
 
             # ── Row 1: File selector + reload ────────────────────────────────
 
@@ -926,7 +986,7 @@ class LoraKeywordsFinder(scripts.Script):
             gr.HTML("<div style='height: 8px'></div>")
 
             with gr.Column(
-                visible=load_config().get("show_advanced", True)
+                visible=load_config().get("show_advanced", False)
             ) as adv_fields_col:
                 # ── Row 3: Name [📋 copy] ─────────────────────────────────────────
                 with gr.Row(variant="compact"):
@@ -1030,34 +1090,38 @@ class LoraKeywordsFinder(scripts.Script):
             # ── Advanced Options ──────────────────────────────────────────────
             with gr.Accordion("⚙️ Advanced Options", open=False):
                 with gr.Row():
-                    show_images_cb = gr.Checkbox(
-                        label="Show example images",
-                        value=lambda: load_config().get("show_images", True),
-                        elem_classes=["lkf-margin-cb"],
-                    )
-                    gallery_mode_rb = gr.Radio(
-                        choices=["Official", "Community"],
-                        value=lambda: load_config().get("gallery_mode", "Official"),
-                        label="Gallery Mode",
-                        elem_classes=["lkf-margin-cb"],
-                    )
-                    show_adv_fields_cb = gr.Checkbox(
-                        label="Show advanced fields",
-                        value=lambda: load_config().get("show_advanced", True),
-                        elem_classes=["lkf-margin-cb"],
-                    )
-                    skip_dialog_cb = gr.Checkbox(
-                        label="Skip paste prompt dialog",
-                        value=lambda: load_config().get("skip_dialog", False),
-                        do_not_save_to_config=True,
-                        elem_classes=["lkf-margin-cb"],
-                    )
-                    follow_symlinks_cb = gr.Checkbox(
-                        label="Follow symbolic links",
-                        value=lambda: load_config().get("follow_symlinks", False),
-                        do_not_save_to_config=True,
-                        elem_classes=["lkf-margin-cb"],
-                    )
+                    with gr.Column(elem_classes=["lkf-opt-col"]):
+                        show_adv_fields_cb = gr.Checkbox(
+                            label="Show advanced fields",
+                            value=lambda: load_config().get("show_advanced", False),
+                            elem_classes=option_classes("show-adv-fields"),
+                        )
+                        follow_symlinks_cb = gr.Checkbox(
+                            label="Follow symbolic links",
+                            value=lambda: load_config().get("follow_symlinks", False),
+                            do_not_save_to_config=True,
+                            elem_classes=option_classes("follow-symlinks"),
+                        )
+                        skip_dialog_cb = gr.Checkbox(
+                            label="Skip paste prompt dialog",
+                            value=lambda: load_config().get("skip_dialog", False),
+                            do_not_save_to_config=True,
+                            elem_classes=option_classes("skip-dialog"),
+                        )
+                    with gr.Column(elem_classes=["lkf-opt-col"]):
+                        show_images_cb = gr.Checkbox(
+                            label="Show example images",
+                            value=lambda: load_config().get("show_images", True),
+                            elem_classes=option_classes("show-images"),
+                        )
+                        include_community_cb = gr.Checkbox(
+                            label="Include community images",
+                            value=lambda: load_config().get(
+                                "include_community_images", False
+                            ),
+                            do_not_save_to_config=True,
+                            elem_classes=option_classes("include-community"),
+                        )
 
                 with gr.Row():
                     clear_cache_btn = gr.Button("🗑️ Clear Cache", variant="secondary")
@@ -1125,16 +1189,18 @@ class LoraKeywordsFinder(scripts.Script):
                 outputs=[lora_dropdown],
             )
 
-            def on_show_images_change(lora_file, show_images, gallery_mode):
+            def on_show_images_change(lora_file, show_images, include_community):
                 cfg = load_config()
                 cfg["show_images"] = show_images
-                cfg["gallery_mode"] = gallery_mode
+                cfg["include_community_images"] = include_community
                 save_config(cfg)
-                return self.get_trained_words(lora_file, show_images, gallery_mode)
+                return self.get_trained_words(
+                    lora_file, show_images, include_community
+                )
 
             show_images_cb.change(
                 fn=on_show_images_change,
-                inputs=[lora_dropdown, show_images_cb, gallery_mode_rb],
+                inputs=[lora_dropdown, show_images_cb, include_community_cb],
                 outputs=[
                     trained_words_display,
                     name_display,
@@ -1157,9 +1223,9 @@ class LoraKeywordsFinder(scripts.Script):
                 ],
             )
 
-            gallery_mode_rb.change(
+            include_community_cb.change(
                 fn=on_show_images_change,
-                inputs=[lora_dropdown, show_images_cb, gallery_mode_rb],
+                inputs=[lora_dropdown, show_images_cb, include_community_cb],
                 outputs=[
                     trained_words_display,
                     name_display,
@@ -1184,32 +1250,7 @@ class LoraKeywordsFinder(scripts.Script):
 
             lora_dropdown.change(
                 fn=self.get_trained_words,
-                inputs=[lora_dropdown, show_images_cb, gallery_mode_rb],
-                outputs=[
-                    trained_words_display,
-                    name_display,
-                    base_model_display,
-                    model_type_display,
-                    price_display,
-                    url_display,
-                    download_url_display,
-                    hash_display,
-                    copy_kw_btn,
-                    copy_name_btn,
-                    copy_url_btn,
-                    copy_dl_url_btn,
-                    copy_hash_btn,
-                    copy_to_prompt_btn,
-                    open_url_btn,
-                    open_dl_url_btn,
-                    open_hash_btn,
-                    images_gallery,
-                ],
-            )
-
-            gallery_mode_rb.change(
-                fn=on_show_images_change,
-                inputs=[lora_dropdown, show_images_cb, gallery_mode_rb],
+                inputs=[lora_dropdown, show_images_cb, include_community_cb],
                 outputs=[
                     trained_words_display,
                     name_display,
@@ -1314,3 +1355,9 @@ class LoraKeywordsFinder(scripts.Script):
             hash_display,
             url_display,
         ]
+
+
+# Reaching this line means the whole module — including the class body above —
+# executed without raising, so the extension is actually usable. A print inside
+# __init__ would fire once per tab (txt2img/img2img) instead of once at startup.
+print("[LoRA Keywords] Extension loaded successfully.")
