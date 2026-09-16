@@ -49,6 +49,12 @@ document.addEventListener("click", function(e) {
                 fetch(nextPageUrl)
                     .then(res => res.json())
                     .then(data => {
+                        if (data.error) {
+                            console.warn("LKF: API Error during pagination:", data.error);
+                            // Do not update nextPage or mark as exhausted on temporary errors
+                            return;
+                        }
+                        
                         const items = data.items || [];
                         const meta = data.metadata || {};
                         let newHtml = "";

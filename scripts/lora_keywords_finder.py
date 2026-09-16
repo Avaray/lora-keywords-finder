@@ -517,6 +517,12 @@ class LoraKeywordsFinder(scripts.Script):
             )
             if resp.status_code == 200:
                 data = resp.json()
+                if "error" in data:
+                    print(
+                        f"[🧙 LoRA Keywords Finder] API error fetching community images: {data['error']}"
+                    )
+                    return [], "", data["error"]
+
                 items = data.get("items", [])
                 next_page = data.get("metadata", {}).get("nextPage", "")
                 valid_images = []
@@ -549,10 +555,16 @@ class LoraKeywordsFinder(scripts.Script):
                     )
                     if len(valid_images) >= 21:
                         break
-                return valid_images, next_page
+                return valid_images, next_page, ""
+            else:
+                msg = f"HTTP {resp.status_code}"
+                print(
+                    f"[🧙 LoRA Keywords Finder] {msg} fetching community images: {resp.text[:200]!r}"
+                )
+                return [], "", msg
         except Exception as e:
             print(f"[🧙 LoRA Keywords Finder] Error fetching community images: {e}")
-        return [], ""
+            return [], "", str(e)
 
     def _fetch_batch_chunk(self, chunk: list) -> tuple:
         """
@@ -631,9 +643,10 @@ class LoraKeywordsFinder(scripts.Script):
 
             community_images = []
             next_page = ""
+            community_err = ""
             if include_community and entry.get("version_id"):
-                community_images, next_page = self._fetch_community_images(
-                    entry.get("version_id"), show_nsfw
+                community_images, next_page, community_err = (
+                    self._fetch_community_images(entry.get("version_id"), show_nsfw)
                 )
                 using_community = bool(community_images)
 
@@ -741,6 +754,8 @@ class LoraKeywordsFinder(scripts.Script):
                 mode_label = "Community Images (Popular)"
             else:
                 mode_label = "Images from the model's creator"
+                if include_community and community_err:
+                    mode_label += " (Community images temporarily unavailable)"
             mode_attr = 'data-mode="community"' if using_community else ""
             version_id_attr = (
                 f' data-version-id="{entry.get("version_id", "")}"'
@@ -754,6 +769,8 @@ class LoraKeywordsFinder(scripts.Script):
                     if entry.get("not_found")
                     else "No example images found for this model."
                 )
+                if community_err and not entry.get("not_found"):
+                    msg = "CivitAI API is currently overloaded or unavailable. Could not fetch images."
                 html_content = f'<div style="padding: 20px; text-align: center; color: #888; border: 1px dashed #555; border-radius: 8px;">{msg}</div>'
 
             gallery_update = gr.update(value=html_content, visible=True)
