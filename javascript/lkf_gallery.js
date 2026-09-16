@@ -68,6 +68,18 @@ document.addEventListener("click", function(e) {
                             }
                             
                             const url = item.url || "";
+                            if (!url) return;
+                            
+                            // Filter non-image extensions
+                            const allowedExts = [".png", ".jpg", ".jpeg", ".webp"];
+                            let ext = "";
+                            try {
+                                const urlObj = new URL(url);
+                                const path = urlObj.pathname.toLowerCase();
+                                ext = path.includes(".") ? "." + path.split(".").pop() : "";
+                            } catch (e) {}
+                            if (!allowedExts.includes(ext)) return;
+                            
                             const pos = m.prompt ? encodeURIComponent(m.prompt) : "";
                             const neg = m.negativePrompt ? encodeURIComponent(m.negativePrompt) : "";
                             let btnHtml = '<div class="lkf-img-prompt-container">';
