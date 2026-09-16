@@ -96,11 +96,11 @@ def attr_text(text: str) -> str:
 # Hover tooltips for the Advanced Options checkboxes — edit the texts here.
 # "\n" inside a text becomes a line break in the tooltip.
 OPTION_TOOLTIPS = {
-    "show-adv-fields": "TODO: explain what 'Show advanced fields' does.",
-    "follow-symlinks": "TODO: explain what 'Follow symbolic links' does.",
-    "skip-dialog": "TODO: explain what 'Skip paste prompt dialog' does.",
-    "show-images": "TODO: explain what 'Show example images' does.",
-    "include-community": "TODO: explain what 'Include community images' does.",
+    "show-adv-fields": "Show additional information about the model.",
+    "follow-symlinks": "Respect and follow symbolic links.",
+    "skip-dialog": "Skip the confirmation dialog when replacing the prompt using image gallery buttons.",
+    "show-images": "Display the image gallery.",
+    "include-community": "Show images created by the community instead of the model author. Community images may have incorrect or missing metadata, so use with caution.",
 }
 
 
@@ -1112,7 +1112,7 @@ class LoraKeywordsFinder(scripts.Script):
                         )
                     with gr.Column(elem_classes=["lkf-opt-col"]):
                         show_images_cb = gr.Checkbox(
-                            label="Show example images",
+                            label="Show image gallery",
                             value=lambda: load_config().get("show_images", True),
                             elem_classes=option_classes("show-images"),
                         )
