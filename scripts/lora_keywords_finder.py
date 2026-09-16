@@ -144,7 +144,6 @@ def option_tooltip_css() -> str:
 
 CIVITAI_SINGLE_URL = "https://civitai.com/api/v1/model-versions/by-hash/{hash}"
 CIVITAI_BATCH_URL = "https://civitai.com/api/v1/model-versions/by-hash"
-CIVITAI_MODEL_URL = "https://civitai.com/models/{model_id}"
 
 MSG_NOT_ON_CIVITAI = "Not found on CivitAI"
 MSG_NO_KEYWORDS = "No keywords provided for this LoRA"
@@ -227,10 +226,19 @@ class LoraKeywordsFinder(scripts.Script):
     def _build_entry_from_api(self, file_hash: str, api_data: dict) -> dict:
         model_id = api_data.get("modelId")
         version_id = api_data.get("id")
+        
+        try:
+            nsfw_level = int(api_data.get("nsfwLevel", 1))
+        except (ValueError, TypeError):
+            nsfw_level = 1
+            
+        domain = "civitai.red" if nsfw_level > 2 else "civitai.com"
+        base_url = f"https://{domain}/models/{model_id}"
+
         model_url = (
-            f"{CIVITAI_MODEL_URL.format(model_id=model_id)}?modelVersionId={version_id}"
+            f"{base_url}?modelVersionId={version_id}"
             if model_id and version_id
-            else CIVITAI_MODEL_URL.format(model_id=model_id)
+            else base_url
             if model_id
             else None
         )
