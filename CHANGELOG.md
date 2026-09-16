@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-09-16
+
+### Added
+- **Option Tooltips** — added descriptive hover tooltips to all advanced configuration checkboxes to clarify their behavior.
+- **Two-Column Advanced Options** — reorganized the advanced options layout into a clean two-column grid.
+- **Pluralized Status Messaging** — improved grammatical correctness for batch fetching and cache clearing status messages.
+- **Atomic Config Saving** — configuration changes are now written safely and validated to prevent corruption.
+
+### Changed
+- **Unified Gallery Checkbox** — migrated the cumbersome `Official / Community` radio button into a simpler `Include community images` checkbox that falls back to official images automatically.
+- **Default Settings** — `Show advanced fields` and `Include community images` are now disabled by default for a cleaner out-of-the-box UI.
+- **UI Label Refinements** — renamed metadata labels for clarity: `Name` → `Model Name`, `Type` → `Model Type`, `Price` → `Access`, and `CivitAI URL` → `Model Page`.
+- Action buttons (copy, open browser) are now strictly disabled on application startup until a valid LoRA is selected.
+
+### Fixed
+- Fixed the `Skip paste prompt dialog` setting not initializing correctly on application startup.
+- Fixed an issue where toggling advanced options or gallery modes would silently overwrite the config file and delete other saved settings.
+- Fixed missing `1em` spacing between the inner Gradio components for the `Base model`, `Type`, and `Price` fields.
+- Fixed a bug where a zero licensing fee was mistakenly categorized as "Paid" instead of "Free".
+- Fixed potential HTML injection/breakage by properly escaping extracted prompts before placing them inside button title attributes.
+- Hardened symbolic link traversal to gracefully skip broken targets and prevent scanner crashes.
+
 ## [2.3.0] - 2026-09-16
 
 ### Added
@@ -103,8 +125,9 @@ All notable changes to this project will be documented in this file.
 - **⚡️ Copy to Prompt** button — appends fetched keywords to the active txt2img or img2img prompt textarea.
 - Support for ForgeUI and other AUTOMATIC1111-based UIs.
 
-[Unreleased]: https://github.com/Avaray/lora-keywords-finder/compare/v2.3.0...main
-[2.3.0]: https://github.com/Avaray/lora-keywords-finder/compare/0239519...4c0deaf
+[Unreleased]: https://github.com/Avaray/lora-keywords-finder/compare/v2.4.0...main
+[2.4.0]: https://github.com/Avaray/lora-keywords-finder/compare/46ac2b4...5853db1
+[2.3.0]: https://github.com/Avaray/lora-keywords-finder/compare/0239519...46ac2b4
 [2.2.0]: https://github.com/Avaray/lora-keywords-finder/compare/ead5668...0239519
 [2.1.0]: https://github.com/Avaray/lora-keywords-finder/compare/cb2d011...ead5668
 [2.0.0]: https://github.com/Avaray/lora-keywords-finder/compare/961a028...cb2d011
