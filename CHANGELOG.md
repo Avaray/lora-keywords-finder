@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.7.0] - 2026-09-17
+
+### Added
+- **Open Post Button**: Each image in the gallery now features a 🌐 button in the top-left corner that directly opens the original post on CivitAI.
+- **NSFW Routing**: The extension now detects models and posts that are highly NSFW and automatically routes their external links to `civitai.red` instead of `civitai.com`.
+- **Scaled Hashing Status**: The "Fetch All Metadata" progress message now gives a more accurate time estimate based on the size of your LoRA library.
+
+### Changed
+- The "Keywords", "Model Name", "Model Page", and "SHA-256" fields are now single-line to prevent accidental manual resizing and keep the UI tidy.
+- The CivitAI batch endpoint is now correctly called with a bare JSON array, fixing a silent fallback bug and massively speeding up bulk operations.
+- HTTP 404 responses from the CivitAI batch endpoint are now correctly treated as "no matches found" rather than network errors.
+
+### Fixed
+- Fixed an issue where prompt button tooltips for dynamically loaded community images were incomplete and failed to display the actual prompt text.
+- Fixed a visual bug where the 😇 and 😈 prompt buttons could intercept pointer events even when their parent carousel slide was hidden during scrolling.
+- Fixed a bug where non-image files (like `.mp4`) from the community gallery would be rendered as broken images; they are now properly filtered out.
+- Fixed an issue where the gallery would completely disappear if all images were filtered out (e.g., due to the NSFW toggle). It now displays a clear placeholder message indicating why no images are shown.
+
 ## [2.6.0] - 2026-09-16
 
 ### Added
@@ -151,7 +169,8 @@ All notable changes to this project will be documented in this file.
 - **⚡️ Copy to Prompt** button — appends fetched keywords to the active txt2img or img2img prompt textarea.
 - Support for ForgeUI and other AUTOMATIC1111-based UIs.
 
-[Unreleased]: https://github.com/Avaray/lora-keywords-finder/compare/v2.6.0...main
+[Unreleased]: https://github.com/Avaray/lora-keywords-finder/compare/v2.7.0...main
+[2.7.0]: https://github.com/Avaray/lora-keywords-finder/compare/v2.6.0...v2.7.0
 [2.6.0]: https://github.com/Avaray/lora-keywords-finder/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/Avaray/lora-keywords-finder/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/Avaray/lora-keywords-finder/compare/46ac2b4...5853db1
