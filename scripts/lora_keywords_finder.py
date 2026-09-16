@@ -100,7 +100,7 @@ OPTION_TOOLTIPS = {
     "follow-symlinks": "Respect and follow symbolic links.",
     "skip-dialog": "Skip the confirmation dialog when replacing the prompt using image gallery buttons.",
     "show-images": "Display the image gallery.",
-    "include-community": "Show images created by the community instead of the model author. Community images may have incorrect or missing metadata, so use with caution.",
+    "include-community": "Also show images created by the community, in addition to the model author's own images. Community images may have incorrect or missing metadata, so use with caution.",
 }
 
 
@@ -157,6 +157,26 @@ _NON_COPYABLE_PREFIXES = (
     "Error:",
     "Error reading",
 )
+
+# CivitAI sometimes stores a placeholder word instead of a real prompt (e.g.
+# metadata scrubbed by the uploader's tool). Treated as "no prompt" only when
+# the ENTIRE trimmed prompt is just one of these words — case-insensitive.
+# Edit this set to add/remove placeholder words.
+_PLACEHOLDER_PROMPT_WORDS = frozenset(
+    {
+        "unknown",
+        "not specified",
+        "null",
+        "false",
+        "no",
+        "undefined",
+    }
+)
+
+
+def _is_placeholder_prompt(text: str) -> bool:
+    """True when `text` is entirely one of the known placeholder words."""
+    return bool(text) and text.strip().lower() in _PLACEHOLDER_PROMPT_WORDS
 
 
 class LoraKeywordsFinder(scripts.Script):
@@ -440,7 +460,9 @@ class LoraKeywordsFinder(scripts.Script):
                 valid_images = []
                 for item in items:
                     meta = item.get("meta")
-                    if not meta or not meta.get("prompt"):
+                    if not meta or not (
+                        meta.get("prompt") or meta.get("negativePrompt")
+                    ):
                         continue
                     # Verify this image actually used THIS specific version via civitaiResources.
                     # CivitAI may tag images to a model even if a different version was used.
@@ -508,26 +530,40 @@ class LoraKeywordsFinder(scripts.Script):
         next_page_attr = ""
         using_community = False
         if show_images:
+            official_images = entry.get("images") or []
+            community_images = []
+            next_page = ""
             if include_community and entry.get("version_id"):
-                images, next_page = self._fetch_community_images(
+                community_images, next_page = self._fetch_community_images(
                     entry.get("version_id")
                 )
-                using_community = bool(images)
-                if next_page and using_community:
-                    import urllib.parse
+                using_community = bool(community_images)
 
-                    next_page_attr = (
-                        f' data-next-page="{next_page.replace('"', "&quot;")}"'
-                    )
+            # Author images always come first; community images (when
+            # requested) are appended after them. Skip any community image
+            # whose URL already appeared among the author's own images so
+            # the same picture never shows up twice.
+            seen_urls = set()
+            for item in (*official_images, *community_images):
+                url = item if isinstance(item, str) else item.get("url", "")
+                if url and url in seen_urls:
+                    continue
+                if url:
+                    seen_urls.add(url)
+                images.append(item)
 
-            if not images:  # No community images (or not requested) — use official
-                images = entry.get("images", [])
+            if using_community and next_page:
+                import urllib.parse
+
+                next_page_attr = (
+                    f' data-next-page="{next_page.replace('"', "&quot;")}"'
+                )
 
         if images and show_images:
             import urllib.parse
 
             img_tags_list = []
-            for idx, item in enumerate(images):
+            for item in images:
                 if isinstance(item, str):
                     url = item
                     pos_prompt, neg_prompt = "", ""
@@ -536,28 +572,34 @@ class LoraKeywordsFinder(scripts.Script):
                     pos_prompt = item.get("prompt", "")
                     neg_prompt = item.get("negativePrompt", "")
 
+                if _is_placeholder_prompt(pos_prompt):
+                    pos_prompt = ""
+                if _is_placeholder_prompt(neg_prompt):
+                    neg_prompt = ""
+
                 if not url:
                     continue
 
-                btn_html = ""
-                if pos_prompt or neg_prompt:
-                    btn_html = '<div class="lkf-img-prompt-container">'
-                    if pos_prompt:
-                        pos_enc = urllib.parse.quote(pos_prompt)
-                        pos_title = attr_text(
-                            f"Send positive prompt to UI\n\n{pos_prompt}"
-                        )
-                        btn_html += f'<div class="lkf-img-prompt-btn lkf-pos-btn" data-pos="{pos_enc}" title="{pos_title}">😇</div>'
-                    if neg_prompt:
-                        neg_enc = urllib.parse.quote(neg_prompt)
-                        neg_title = attr_text(
-                            f"Send negative prompt to UI\n\n{neg_prompt}"
-                        )
-                        btn_html += f'<div class="lkf-img-prompt-btn lkf-neg-btn" data-neg="{neg_enc}" title="{neg_title}">😈</div>'
-                    btn_html += "</div>"
+                # An image needs at least one real prompt (positive or
+                # negative) to be worth showing — without either one, there's
+                # nothing useful to send to the UI.
+                if not pos_prompt and not neg_prompt:
+                    continue
 
-                # Carousel classes
-                visible_cls = " lkf-visible" if idx < 3 else ""
+                btn_html = '<div class="lkf-img-prompt-container">'
+                if pos_prompt:
+                    pos_enc = urllib.parse.quote(pos_prompt)
+                    pos_title = attr_text(f"Send positive prompt to UI\n\n{pos_prompt}")
+                    btn_html += f'<div class="lkf-img-prompt-btn lkf-pos-btn" data-pos="{pos_enc}" title="{pos_title}">😇</div>'
+                if neg_prompt:
+                    neg_enc = urllib.parse.quote(neg_prompt)
+                    neg_title = attr_text(f"Send negative prompt to UI\n\n{neg_prompt}")
+                    btn_html += f'<div class="lkf-img-prompt-btn lkf-neg-btn" data-neg="{neg_enc}" title="{neg_title}">😈</div>'
+                btn_html += "</div>"
+
+                # Carousel classes — based on position among the KEPT images,
+                # not the raw list, since some images above may have been skipped.
+                visible_cls = " lkf-visible" if len(img_tags_list) < 3 else ""
                 tag = f'<div class="lkf-carousel-slide{visible_cls}"><div class="lkf-img-wrapper"><a href="{url}" target="_blank"><img src="{url}" loading="lazy"/></a>{btn_html}</div></div>'
                 img_tags_list.append(tag)
 
@@ -565,14 +607,16 @@ class LoraKeywordsFinder(scripts.Script):
 
             # Add carousel arrows
             arrows_html = ""
-            if len(images) > 3:
+            if len(img_tags_list) > 3:
                 arrows_html = '<div class="lkf-carousel-nav left-arrow">◀</div><div class="lkf-carousel-nav right-arrow">▶</div>'
 
-            mode_label = (
-                "Community Images (Popular)"
-                if using_community
-                else "Images from the model's creator"
-            )
+            has_official = bool(official_images)
+            if using_community and has_official:
+                mode_label = "Images from the model's creator + Community"
+            elif using_community:
+                mode_label = "Community Images (Popular)"
+            else:
+                mode_label = "Images from the model's creator"
             mode_attr = 'data-mode="community"' if using_community else ""
             version_id_attr = (
                 f' data-version-id="{entry.get("version_id", "")}"'
@@ -580,7 +624,11 @@ class LoraKeywordsFinder(scripts.Script):
                 else ""
             )
             html_content = f'<span style="display: block; font-size: 14px; font-weight: 500;">{mode_label}</span><div class="lkf-carousel-container" data-current-index="0" {mode_attr}{version_id_attr}{next_page_attr}>{img_tags}{arrows_html}</div>'
-            gallery_update = gr.update(value=html_content, visible=True)
+            gallery_update = (
+                gr.update(value=html_content, visible=True)
+                if img_tags_list
+                else gr.update(value="", visible=False)
+            )
         else:
             gallery_update = gr.update(value="", visible=False)
         """
