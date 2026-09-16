@@ -2,9 +2,7 @@
 
 ![Image of extension lora-keywords-finder](/assets/image_of_extension.jpg "Image of extension lora-keywords-finder")
 
-This Extension lets you easily find trained keywords, example images, and metadata for your local [LoRA](https://en.wikipedia.org/wiki/LoRA_(machine_learning)) models by querying the [CivitAI API](https://developer.civitai.com/docs/api/public-rest).   
-
-Primarily created for [Forge Neo](https://github.com/Haoming02/sd-webui-forge-classic/tree/neo), it also should work with other UIs based on [AUTOMATIC1111](https://github.com/AUTOMATIC1111/stable-diffusion-webui).
+This Extension lets you easily find trained keywords, example images, and metadata for your local [LoRA](https://en.wikipedia.org/wiki/LoRA_(machine_learning)) models by querying the [CivitAI API](https://developer.civitai.com/docs/api/public-rest). Primarily created for [Forge Neo](https://github.com/Haoming02/sd-webui-forge-classic/tree/neo), it also should work with other UIs based on [AUTOMATIC1111](https://github.com/AUTOMATIC1111/stable-diffusion-webui).
 
 ## ✨ Features
 
