@@ -80,11 +80,17 @@ document.addEventListener("click", function(e) {
                             } catch (e) {}
                             if (!allowedExts.includes(ext)) return;
                             
-                            const pos = m.prompt ? encodeURIComponent(m.prompt) : "";
-                            const neg = m.negativePrompt ? encodeURIComponent(m.negativePrompt) : "";
+                            const posRaw = m.prompt || "";
+                            const negRaw = m.negativePrompt || "";
+                            const pos = posRaw ? encodeURIComponent(posRaw) : "";
+                            const neg = negRaw ? encodeURIComponent(negRaw) : "";
+                            
+                            // Escape text for safe use inside an HTML attribute value
+                            const escAttr = s => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '&#10;');
+                            
                             let btnHtml = '<div class="lkf-img-prompt-container">';
-                            if (pos) btnHtml += `<div class="lkf-img-prompt-btn lkf-pos-btn" data-pos="${pos}" title="Send positive prompt to UI">😇</div>`;
-                            if (neg) btnHtml += `<div class="lkf-img-prompt-btn lkf-neg-btn" data-neg="${neg}" title="Send negative prompt to UI">😈</div>`;
+                            if (pos) btnHtml += `<div class="lkf-img-prompt-btn lkf-pos-btn" data-pos="${pos}" title="${escAttr('Send positive prompt to UI\n\n' + posRaw)}">😇</div>`;
+                            if (neg) btnHtml += `<div class="lkf-img-prompt-btn lkf-neg-btn" data-neg="${neg}" title="${escAttr('Send negative prompt to UI\n\n' + negRaw)}">😈</div>`;
                             btnHtml += '</div>';
                             
                             const imageId = item.id;

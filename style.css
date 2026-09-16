@@ -6,8 +6,13 @@
 .lkf-custom-gallery img, .lkf-carousel-container img { width: 100% !important; height: 250px !important; object-fit: cover !important; display: block !important; }
 
 .lkf-img-wrapper { position: relative !important; flex: 1 1 0 !important; max-width: 33.33% !important; overflow: hidden !important; border-radius: 0.5em !important; }
-.lkf-img-wrapper a { display: block !important; width: 100% !important; height: 100% !important; overflow: hidden !important; border-radius: 0.5em !important; }
-
+.lkf-img-wrapper a.lkf-img-link-main { display: block !important; width: 100% !important; height: 100% !important; overflow: hidden !important; border-radius: 0.5em !important; position: relative !important; z-index: 0 !important; }
+.lkf-img-link-container { position: absolute !important; top: 6px !important; left: 6px !important; display: flex !important; z-index: 10 !important; pointer-events: auto !important; }
+.lkf-img-link-container a.lkf-img-link-btn { background: rgba(0,0,0,0.6) !important; color: white !important; border-radius: 4px !important; padding: 0 !important; text-decoration: none !important; font-size: 16px !important; transition: background 0.2s !important; display: flex !important; align-items: center !important; justify-content: center !important; width: 32px !important; height: 32px !important; aspect-ratio: 1/1 !important; box-sizing: border-box !important; pointer-events: auto !important; }
+.lkf-img-link-container a.lkf-img-link-btn:hover { background: rgba(0,0,0,0.9) !important; }
+.lkf-img-prompt-container { position: absolute !important; top: 6px !important; right: 6px !important; display: flex !important; gap: 4px !important; z-index: 10 !important; pointer-events: auto !important; }
+.lkf-img-prompt-container .lkf-img-prompt-btn { background: rgba(0,0,0,0.6) !important; color: white !important; border: none !important; border-radius: 4px !important; padding: 0 !important; cursor: pointer !important; font-size: 16px !important; transition: background 0.2s !important; display: flex !important; align-items: center !important; justify-content: center !important; width: 32px !important; height: 32px !important; aspect-ratio: 1/1 !important; box-sizing: border-box !important; pointer-events: auto !important; }
+.lkf-img-prompt-container .lkf-img-prompt-btn:hover { background: rgba(0,0,0,0.9) !important; }
 
 .lkf-base-model-row { gap: 1em !important; }
 .lkf-base-model-row .form, .lkf-base-model-row div.form { gap: 1em !important; }
