@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import html
 import time
 import hashlib
 import requests
@@ -36,6 +37,22 @@ def save_config(config):
 
     with open(config_file, "w") as f:
         json.dump(config, f)
+
+
+def plural(count: int, word: str, suffix: str = "s") -> str:
+    """
+    Append the optional plural suffix when needed.
+
+    plural(1, "file")        -> "file"
+    plural(3, "file")        -> "files"
+    plural(2, "hash", "es")  -> "hashes"
+    """
+    return word if abs(count) == 1 else f"{word}{suffix}"
+
+
+def attr_text(text: str) -> str:
+    """Escape text so it can be safely used inside an HTML attribute."""
+    return html.escape(text, quote=True).replace("\n", "&#10;")
 
 
 CIVITAI_SINGLE_URL = "https://civitai.com/api/v1/model-versions/by-hash/{hash}"
@@ -357,10 +374,16 @@ class LoraKeywordsFinder(scripts.Script):
                     btn_html = '<div class="lkf-img-prompt-container">'
                     if pos_prompt:
                         pos_enc = urllib.parse.quote(pos_prompt)
-                        btn_html += f'<div class="lkf-img-prompt-btn lkf-pos-btn" data-pos="{pos_enc}" title="Send positive prompt to UI">😇</div>'
+                        pos_title = attr_text(
+                            f"Send positive prompt to UI\n\n{pos_prompt}"
+                        )
+                        btn_html += f'<div class="lkf-img-prompt-btn lkf-pos-btn" data-pos="{pos_enc}" title="{pos_title}">😇</div>'
                     if neg_prompt:
                         neg_enc = urllib.parse.quote(neg_prompt)
-                        btn_html += f'<div class="lkf-img-prompt-btn lkf-neg-btn" data-neg="{neg_enc}" title="Send negative prompt to UI">😈</div>'
+                        neg_title = attr_text(
+                            f"Send negative prompt to UI\n\n{neg_prompt}"
+                        )
+                        btn_html += f'<div class="lkf-img-prompt-btn lkf-neg-btn" data-neg="{neg_enc}" title="{neg_title}">😈</div>'
                     btn_html += "</div>"
 
                 # Carousel classes
@@ -545,8 +568,9 @@ class LoraKeywordsFinder(scripts.Script):
                     removed += 1
                 except Exception as e:
                     print(f"[LoRA Keywords] Could not delete {fname}: {e}")
-        print(f"[LoRA Keywords] Cache cleared: {removed} file(s) removed")
-        return gr.update(value=f"✔️ Cache cleared — {removed} file(s) removed")
+        removed_files = f"{removed} {plural(removed, 'file')}"
+        print(f"[LoRA Keywords] Cache cleared: {removed_files} removed")
+        return gr.update(value=f"✔️ Cache cleared — {removed_files} removed")
 
     def fetch_all_metadata(self):
         """
@@ -559,7 +583,7 @@ class LoraKeywordsFinder(scripts.Script):
             yield gr.update(value="No LoRA files found.")
             return
 
-        yield gr.update(value=f"🔍 Hashing {total} file(s)…")
+        yield gr.update(value=f"🔍 Hashing {total} {plural(total, 'file')}…")
 
         to_fetch = {}  # {hash: lora_file} — only uncached ones
         skipped = 0
@@ -579,15 +603,19 @@ class LoraKeywordsFinder(scripts.Script):
                 to_fetch[h] = lora_file
 
         if not to_fetch:
-            msg = f"✔️ All {total} LoRA(s) already cached."
+            msg = f"✔️ All {total} {plural(total, 'LoRA')} already cached."
             if hash_errors:
-                msg += f" ({hash_errors} file(s) could not be read)"
+                msg += (
+                    f" ({hash_errors} {plural(hash_errors, 'file')}"
+                    f" could not be read)"
+                )
             yield gr.update(value=msg)
             return
 
         n_to_fetch = len(to_fetch)
         yield gr.update(
-            value=f"⬇️ Fetching metadata for {n_to_fetch} LoRA(s)"
+            value=f"⬇️ Fetching metadata for {n_to_fetch}"
+            f" {plural(n_to_fetch, 'LoRA')}"
             f" (skipped {skipped} already cached)…"
         )
 
@@ -603,7 +631,7 @@ class LoraKeywordsFinder(scripts.Script):
             ]
             yield gr.update(
                 value=f"⬇️ Batch {chunk_index + 1}/{total_chunks}"
-                f" ({len(chunk)} hashes) — fetching…"
+                f" ({len(chunk)} {plural(len(chunk), 'hash', 'es')}) — fetching…"
             )
 
             batch_ok, result_map = self._fetch_batch_chunk(chunk)
@@ -612,7 +640,8 @@ class LoraKeywordsFinder(scripts.Script):
                 # Batch endpoint failed — fall back to individual requests
                 print(
                     f"[LoRA Keywords] Batch {chunk_index + 1} failed;"
-                    f" falling back to individual requests for {len(chunk)} hash(es)"
+                    f" falling back to individual requests for {len(chunk)}"
+                    f" {plural(len(chunk), 'hash', 'es')}"
                 )
                 yield gr.update(
                     value=f"⚠️ Batch {chunk_index + 1} failed, retrying individually…"
@@ -643,7 +672,7 @@ class LoraKeywordsFinder(scripts.Script):
             if self._load_cache(h) and self._load_cache(h).get("not_found")
         )
         found_count = done - not_found_count
-        parts = [f"✔️ Done! Processed {done} LoRA(s)."]
+        parts = [f"✔️ Done! Processed {done} {plural(done, 'LoRA')}."]
         parts.append(f"Found on CivitAI: {found_count}, not found: {not_found_count}.")
         if skipped:
             parts.append(f"Skipped (cached): {skipped}.")
