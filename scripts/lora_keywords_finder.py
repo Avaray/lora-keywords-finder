@@ -650,7 +650,7 @@ class LoraKeywordsFinder(scripts.Script):
 
                 next_page_attr = f' data-next-page="{next_page.replace('"', "&quot;")}"'
 
-        if images and show_images:
+        if show_images:
             import urllib.parse
 
             img_tags_list = []
