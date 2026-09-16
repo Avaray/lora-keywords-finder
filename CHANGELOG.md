@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-09-16
+
+### Added
+- **Cancelable Metadata Fetch**: The "Fetch All Metadata" process can now be aborted mid-way by clicking the new "Cancel" button. This safely halts the operation, preserves already-fetched data, and prevents writing incomplete cache files to disk.
+- **Image URL Filtering**: The gallery now strictly filters media and explicitly ignores unsupported formats like MP4 videos, ensuring only valid images (`.png`, `.jpg`, `.jpeg`, `.webp`) are processed and displayed.
+
+### Changed
+- **Gallery UI Polish**: The carousel navigation arrows have been styled to be perfectly square, horizontally/vertically centered, and explicitly colored white to improve visibility against darker images.
+- **Form Styling Consistency**: Standardized the bottom margins (4px) across all input field labels (textboxes and dropdowns) to perfectly align with the surrounding interface regardless of the base WebUI theme.
+
+
 ## [2.5.0] - 2026-09-16
 
 ### Added
@@ -140,7 +151,8 @@ All notable changes to this project will be documented in this file.
 - **⚡️ Copy to Prompt** button — appends fetched keywords to the active txt2img or img2img prompt textarea.
 - Support for ForgeUI and other AUTOMATIC1111-based UIs.
 
-[Unreleased]: https://github.com/Avaray/lora-keywords-finder/compare/v2.5.0...main
+[Unreleased]: https://github.com/Avaray/lora-keywords-finder/compare/v2.6.0...main
+[2.6.0]: https://github.com/Avaray/lora-keywords-finder/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/Avaray/lora-keywords-finder/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/Avaray/lora-keywords-finder/compare/46ac2b4...5853db1
 [2.3.0]: https://github.com/Avaray/lora-keywords-finder/compare/0239519...46ac2b4
