@@ -58,7 +58,9 @@ def load_config():
                     " — falling back to defaults"
                 )
         except Exception as e:
-            print(f"[🧙 LoRA Keywords Finder] Could not read config.json ({e}) — using defaults")
+            print(
+                f"[🧙 LoRA Keywords Finder] Could not read config.json ({e}) — using defaults"
+            )
     return config
 
 
@@ -251,12 +253,12 @@ class LoraKeywordsFinder(scripts.Script):
     def _build_entry_from_api(self, file_hash: str, api_data: dict) -> dict:
         model_id = api_data.get("modelId")
         version_id = api_data.get("id")
-        
+
         try:
             nsfw_level = int(api_data.get("nsfwLevel", 1))
         except (ValueError, TypeError):
             nsfw_level = 1
-            
+
         domain = "civitai.red" if nsfw_level > 2 else "civitai.com"
         base_url = f"https://{domain}/models/{model_id}"
 
@@ -490,12 +492,15 @@ class LoraKeywordsFinder(scripts.Script):
         if not url:
             return False
         from urllib.parse import urlparse
+
         path = urlparse(url).path.lower()
         # Strip query parameters that some CDNs append (e.g. /image.jpeg?width=…)
         ext = "." + path.rsplit(".", 1)[-1] if "." in path else ""
         return ext in LoraKeywordsFinder._ALLOWED_IMAGE_EXTS
 
-    def _fetch_community_images(self, version_id: str, show_nsfw: bool = False) -> tuple:
+    def _fetch_community_images(
+        self, version_id: str, show_nsfw: bool = False
+    ) -> tuple:
         import requests
 
         str_version_id = str(version_id)
@@ -505,7 +510,7 @@ class LoraKeywordsFinder(scripts.Script):
                 url += "&nsfw=true"
             else:
                 url += "&browsingLevel=3"
-            
+
             resp = requests.get(
                 url,
                 timeout=5,
@@ -591,7 +596,9 @@ class LoraKeywordsFinder(scripts.Script):
                     f" HTTP {resp.status_code} — {resp.text[:200]!r}"
                 )
             except Exception as e:
-                print(f"[🧙 LoRA Keywords Finder] Batch attempt {attempt + 1} exception: {e}")
+                print(
+                    f"[🧙 LoRA Keywords Finder] Batch attempt {attempt + 1} exception: {e}"
+                )
             if attempt == 0:
                 time.sleep(1)
         return False, {}
@@ -696,7 +703,7 @@ class LoraKeywordsFinder(scripts.Script):
                 # nothing useful to send to the UI.
                 if not pos_prompt and not neg_prompt:
                     continue
-                    
+
                 link_html = ""
                 if image_id:
                     domain = "civitai.red" if is_nsfw else "civitai.com"
@@ -742,9 +749,13 @@ class LoraKeywordsFinder(scripts.Script):
             )
             html_content = f'<span style="display: block; font-size: 14px; font-weight: 500;">{mode_label}</span><div class="lkf-carousel-container" data-current-index="0" {mode_attr}{version_id_attr}{next_page_attr}>{img_tags}{arrows_html}</div>'
             if not img_tags_list:
-                msg = "Model not found on CivitAI." if entry.get("not_found") else "No example images found for this model."
+                msg = (
+                    "Model not found on CivitAI."
+                    if entry.get("not_found")
+                    else "No example images found for this model."
+                )
                 html_content = f'<div style="padding: 20px; text-align: center; color: #888; border: 1px dashed #555; border-radius: 8px;">{msg}</div>'
-                
+
             gallery_update = gr.update(value=html_content, visible=True)
         else:
             gallery_update = gr.update(value="", visible=False)
@@ -810,7 +821,9 @@ class LoraKeywordsFinder(scripts.Script):
             choices=choices, value="", label=f"File ({len(files)} available)"
         )
 
-    def get_trained_words(self, lora_file, show_images=True, include_community=False, show_nsfw=False):
+    def get_trained_words(
+        self, lora_file, show_images=True, include_community=False, show_nsfw=False
+    ):
         """Returns (kw, name, hash, url,
         copy_kw_btn, copy_name_btn, copy_hash_btn, copy_url_btn,
         copy_to_prompt_btn, open_url_btn, open_hash_btn)."""
@@ -866,13 +879,17 @@ class LoraKeywordsFinder(scripts.Script):
         cached = self._load_cache(file_hash)
         if cached is not None:
             print(f"[🧙 LoRA Keywords Finder] Loaded from cache for '{lora_file}'")
-            return self._entry_to_ui(cached, file_hash, show_images, include_community, show_nsfw)
+            return self._entry_to_ui(
+                cached, file_hash, show_images, include_community, show_nsfw
+            )
 
         # Not cached — fetch from CivitAI
         try:
             entry = self._fetch_single(file_hash)
             self._save_cache(entry)
-            return self._entry_to_ui(entry, file_hash, show_images, include_community, show_nsfw)
+            return self._entry_to_ui(
+                entry, file_hash, show_images, include_community, show_nsfw
+            )
         except Exception as e:
             err = str(e)
             print(f"[🧙 LoRA Keywords Finder] Fetch error for '{lora_file}': {err}")
@@ -936,7 +953,9 @@ class LoraKeywordsFinder(scripts.Script):
 
         for lora_file in lora_files:
             if self._cancel_fetch.is_set():
-                yield gr.update(value="⛔ Cancelled during hashing. No files were modified.")
+                yield gr.update(
+                    value="⛔ Cancelled during hashing. No files were modified."
+                )
                 return
             full_path = os.path.join(shared.cmd_opts.lora_dir, lora_file)
             try:
@@ -1011,7 +1030,9 @@ class LoraKeywordsFinder(scripts.Script):
                     try:
                         entry = self._fetch_single(h)
                     except Exception as e:
-                        print(f"[🧙 LoRA Keywords Finder] Individual fetch failed for {h}: {e}")
+                        print(
+                            f"[🧙 LoRA Keywords Finder] Individual fetch failed for {h}: {e}"
+                        )
                         entry = self._not_found_entry(h)
                         api_errors += 1
                     self._save_cache(entry)
@@ -1129,7 +1150,9 @@ class LoraKeywordsFinder(scripts.Script):
         }
         """
 
-        with gr.Accordion("🧙 LoRA Keywords Finder", open=False, elem_id="lkf_container"):
+        with gr.Accordion(
+            "🧙 LoRA Keywords Finder", open=False, elem_id="lkf_container"
+        ):
             # CSS: fix dropdown padding/margin to match textboxes
             gr.HTML(
                 """<style>
@@ -1432,17 +1455,26 @@ class LoraKeywordsFinder(scripts.Script):
                 outputs=[lora_dropdown],
             )
 
-            def on_show_images_change(lora_file, show_images, include_community, show_nsfw):
+            def on_show_images_change(
+                lora_file, show_images, include_community, show_nsfw
+            ):
                 cfg = load_config()
                 cfg["show_images"] = show_images
                 cfg["include_community_images"] = include_community
                 cfg["show_nsfw_images"] = show_nsfw
                 save_config(cfg)
-                return self.get_trained_words(lora_file, show_images, include_community, show_nsfw)
+                return self.get_trained_words(
+                    lora_file, show_images, include_community, show_nsfw
+                )
 
             show_images_cb.change(
                 fn=on_show_images_change,
-                inputs=[lora_dropdown, show_images_cb, include_community_cb, show_nsfw_cb],
+                inputs=[
+                    lora_dropdown,
+                    show_images_cb,
+                    include_community_cb,
+                    show_nsfw_cb,
+                ],
                 outputs=[
                     trained_words_display,
                     name_display,
@@ -1467,7 +1499,12 @@ class LoraKeywordsFinder(scripts.Script):
 
             include_community_cb.change(
                 fn=on_show_images_change,
-                inputs=[lora_dropdown, show_images_cb, include_community_cb, show_nsfw_cb],
+                inputs=[
+                    lora_dropdown,
+                    show_images_cb,
+                    include_community_cb,
+                    show_nsfw_cb,
+                ],
                 outputs=[
                     trained_words_display,
                     name_display,
@@ -1492,7 +1529,12 @@ class LoraKeywordsFinder(scripts.Script):
 
             show_nsfw_cb.change(
                 fn=on_show_images_change,
-                inputs=[lora_dropdown, show_images_cb, include_community_cb, show_nsfw_cb],
+                inputs=[
+                    lora_dropdown,
+                    show_images_cb,
+                    include_community_cb,
+                    show_nsfw_cb,
+                ],
                 outputs=[
                     trained_words_display,
                     name_display,
@@ -1517,7 +1559,12 @@ class LoraKeywordsFinder(scripts.Script):
 
             lora_dropdown.change(
                 fn=self.get_trained_words,
-                inputs=[lora_dropdown, show_images_cb, include_community_cb, show_nsfw_cb],
+                inputs=[
+                    lora_dropdown,
+                    show_images_cb,
+                    include_community_cb,
+                    show_nsfw_cb,
+                ],
                 outputs=[
                     trained_words_display,
                     name_display,
