@@ -887,8 +887,9 @@ class LoraKeywordsFinder(scripts.Script):
                     placeholder="Status will appear here…",
                 )
                 # Bridge element: JS reads this to check skip_dialog setting
+                init_skip = "1" if load_config().get("skip_dialog", False) else "0"
                 skip_dialog_bridge = gr.HTML(
-                    value='<b class="lkf-cfg-skip-dialog">0</b>',
+                    value=f'<b class="lkf-cfg-skip-dialog">{init_skip}</b>',
                     visible=False,
                     elem_classes=["lkf-hidden-bridge"],
                 )
@@ -896,13 +897,9 @@ class LoraKeywordsFinder(scripts.Script):
             # ── Event handlers ────────────────────────────────────────────────
 
             def on_show_adv_change(show_adv):
-                save_config(
-                    {
-                        "show_images": load_config().get("show_images", True),
-                        "gallery_mode": load_config().get("gallery_mode", "Official"),
-                        "show_advanced": show_adv,
-                    }
-                )
+                cfg = load_config()
+                cfg["show_advanced"] = show_adv
+                save_config(cfg)
                 return gr.update(visible=show_adv)
 
             show_adv_fields_cb.change(
@@ -940,13 +937,10 @@ class LoraKeywordsFinder(scripts.Script):
             )
 
             def on_show_images_change(lora_file, show_images, gallery_mode):
-                save_config(
-                    {
-                        "show_images": show_images,
-                        "show_advanced": load_config().get("show_advanced", True),
-                        "gallery_mode": gallery_mode,
-                    }
-                )
+                cfg = load_config()
+                cfg["show_images"] = show_images
+                cfg["gallery_mode"] = gallery_mode
+                save_config(cfg)
                 return self.get_trained_words(lora_file, show_images, gallery_mode)
 
             show_images_cb.change(
