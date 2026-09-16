@@ -3,6 +3,7 @@ import re
 import json
 import html
 import time
+import threading
 import hashlib
 import requests
 import gradio as gr  # type: ignore
@@ -184,6 +185,7 @@ def _is_placeholder_prompt(text: str) -> bool:
 class LoraKeywordsFinder(scripts.Script):
     def __init__(self):
         super().__init__()
+        self._cancel_fetch = threading.Event()
 
     def title(self):
         return "LoRA Keywords Finder"
@@ -824,24 +826,37 @@ class LoraKeywordsFinder(scripts.Script):
         print(f"[🧙 LoRA Keywords Finder] Cache cleared: {removed_files} removed")
         return gr.update(value=f"✔️ Cache cleared — {removed_files} removed")
 
+    def cancel_fetch(self):
+        """Signal the running fetch_all_metadata generator to stop."""
+        self._cancel_fetch.set()
+        return gr.update(value="⛔ Cancelling…")
+
     def fetch_all_metadata(self):
         """
         Generator: hashes all LoRA files, fetches metadata in batches of 100,
         yields gr.update objects to the status textbox after each step.
+        Respects self._cancel_fetch — when set, stops cleanly without writing
+        any partial/incomplete cache files.
         """
+        # Clear any leftover cancel signal from a previous run.
+        self._cancel_fetch.clear()
+
         lora_files = self._list_lora_files()
         total = len(lora_files)
         if total == 0:
             yield gr.update(value="No LoRA files found.")
             return
 
-        yield gr.update(value=f"🔍 Hashing {total} {plural(total, 'file')}…")
+        yield gr.update(value=f"🔍 Hashing {total} {plural(total, 'file')}. This may take a moment.")
 
         to_fetch = {}  # {hash: lora_file} — only uncached ones
         skipped = 0
         hash_errors = 0
 
         for lora_file in lora_files:
+            if self._cancel_fetch.is_set():
+                yield gr.update(value="⛔ Cancelled during hashing. No files were modified.")
+                return
             full_path = os.path.join(shared.cmd_opts.lora_dir, lora_file)
             try:
                 h = self._hash_file(full_path)
@@ -877,6 +892,13 @@ class LoraKeywordsFinder(scripts.Script):
         api_errors = 0
 
         for chunk_index in range(total_chunks):
+            if self._cancel_fetch.is_set():
+                yield gr.update(
+                    value=f"⛔ Cancelled after {done} of {n_to_fetch} {plural(n_to_fetch, 'LoRA')}."
+                    f" Already-completed entries were saved."
+                )
+                return
+
             chunk = all_hashes[
                 chunk_index * CHUNK_SIZE : (chunk_index + 1) * CHUNK_SIZE
             ]
@@ -898,6 +920,12 @@ class LoraKeywordsFinder(scripts.Script):
                     value=f"⚠️ Batch {chunk_index + 1} failed, retrying individually…"
                 )
                 for h in chunk:
+                    if self._cancel_fetch.is_set():
+                        yield gr.update(
+                            value=f"⛔ Cancelled after {done} of {n_to_fetch} {plural(n_to_fetch, 'LoRA')}."
+                            f" Already-completed entries were saved."
+                        )
+                        return
                     try:
                         entry = self._fetch_single(h)
                     except Exception as e:
@@ -908,6 +936,12 @@ class LoraKeywordsFinder(scripts.Script):
                     done += 1
             else:
                 for h in chunk:
+                    if self._cancel_fetch.is_set():
+                        yield gr.update(
+                            value=f"⛔ Cancelled after {done} of {n_to_fetch} {plural(n_to_fetch, 'LoRA')}."
+                            f" Already-completed entries were saved."
+                        )
+                        return
                     entry = (
                         self._build_entry_from_api(h, result_map[h])
                         if h in result_map
@@ -1236,6 +1270,9 @@ class LoraKeywordsFinder(scripts.Script):
                     fetch_all_btn = gr.Button(
                         "⬇️ Fetch All Metadata", variant="secondary"
                     )
+                    cancel_fetch_btn = gr.Button(
+                        "⛔ Cancel", variant="stop", visible=False
+                    )
                 gr.HTML("<div style='height: 8px'></div>")
                 adv_status = gr.Textbox(
                     show_label=False,
@@ -1476,7 +1513,18 @@ class LoraKeywordsFinder(scripts.Script):
             )
 
             fetch_all_btn.click(
+                fn=lambda: (gr.update(visible=False), gr.update(visible=True)),
+                outputs=[fetch_all_btn, cancel_fetch_btn],
+            ).then(
                 fn=self.fetch_all_metadata,
+                outputs=[adv_status],
+            ).then(
+                fn=lambda: (gr.update(visible=True), gr.update(visible=False)),
+                outputs=[fetch_all_btn, cancel_fetch_btn],
+            )
+
+            cancel_fetch_btn.click(
+                fn=self.cancel_fetch,
                 outputs=[adv_status],
             )
 
