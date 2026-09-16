@@ -22,6 +22,7 @@ DEFAULT_CONFIG = {
     "show_images": True,
     "show_advanced": False,
     "include_community_images": False,
+    "show_nsfw_images": False,
     "skip_dialog": False,
     "follow_symlinks": False,
 }
@@ -101,6 +102,7 @@ OPTION_TOOLTIPS = {
     "skip-dialog": "Skip the confirmation dialog when replacing the prompt using image gallery buttons.",
     "show-images": "Display the image gallery.",
     "include-community": "Also show images created by the community, in addition to the model author's own images. Community images may have incorrect or missing metadata, so use with caution.",
+    "show-nsfw": "Show NSFW (Not Safe For Work) images in the gallery.",
 }
 
 
@@ -267,6 +269,7 @@ class LoraKeywordsFinder(scripts.Script):
                     "negativePrompt": img.get("meta", {}).get("negativePrompt", "")
                     if isinstance(img.get("meta"), dict)
                     else "",
+                    "nsfwLevel": img.get("nsfwLevel"),
                 }
                 for img in api_data.get("images", [])
                 if img.get("url")
@@ -444,13 +447,19 @@ class LoraKeywordsFinder(scripts.Script):
             return result
         return {}
 
-    def _fetch_community_images(self, version_id: str) -> tuple:
+    def _fetch_community_images(self, version_id: str, show_nsfw: bool = False) -> tuple:
         import requests
 
         str_version_id = str(version_id)
         try:
+            url = f"https://civitai.com/api/v1/images?modelVersionId={version_id}&sort=Most%20Reactions&period=AllTime&limit=100&withMeta=true"
+            if show_nsfw:
+                url += "&nsfw=true"
+            else:
+                url += "&browsingLevel=3"
+            
             resp = requests.get(
-                f"https://civitai.com/api/v1/images?modelVersionId={version_id}&sort=Most%20Reactions&period=AllTime&limit=100&withMeta=true",
+                url,
                 timeout=5,
             )
             if resp.status_code == 200:
@@ -525,17 +534,29 @@ class LoraKeywordsFinder(scripts.Script):
         file_hash: str,
         show_images: bool = True,
         include_community: bool = False,
+        show_nsfw: bool = False,
     ):
         images = []
         next_page_attr = ""
         using_community = False
         if show_images:
             official_images = entry.get("images") or []
+            if not show_nsfw:
+                filtered_official = []
+                for item in official_images:
+                    if isinstance(item, dict):
+                        lvl = item.get("nsfwLevel")
+                        if lvl in ("None", "Soft", "PG", "PG-13", 1, 2, None):
+                            filtered_official.append(item)
+                    else:
+                        filtered_official.append(item)
+                official_images = filtered_official
+
             community_images = []
             next_page = ""
             if include_community and entry.get("version_id"):
                 community_images, next_page = self._fetch_community_images(
-                    entry.get("version_id")
+                    entry.get("version_id"), show_nsfw
                 )
                 using_community = bool(community_images)
 
@@ -555,9 +576,7 @@ class LoraKeywordsFinder(scripts.Script):
             if using_community and next_page:
                 import urllib.parse
 
-                next_page_attr = (
-                    f' data-next-page="{next_page.replace('"', "&quot;")}"'
-                )
+                next_page_attr = f' data-next-page="{next_page.replace('"', "&quot;")}"'
 
         if images and show_images:
             import urllib.parse
@@ -693,7 +712,7 @@ class LoraKeywordsFinder(scripts.Script):
             choices=choices, value="", label=f"File ({len(files)} available)"
         )
 
-    def get_trained_words(self, lora_file, show_images=True, include_community=False):
+    def get_trained_words(self, lora_file, show_images=True, include_community=False, show_nsfw=False):
         """Returns (kw, name, hash, url,
         copy_kw_btn, copy_name_btn, copy_hash_btn, copy_url_btn,
         copy_to_prompt_btn, open_url_btn, open_hash_btn)."""
@@ -749,13 +768,13 @@ class LoraKeywordsFinder(scripts.Script):
         cached = self._load_cache(file_hash)
         if cached is not None:
             print(f"[LoRA Keywords] Loaded from cache for '{lora_file}'")
-            return self._entry_to_ui(cached, file_hash, show_images, include_community)
+            return self._entry_to_ui(cached, file_hash, show_images, include_community, show_nsfw)
 
         # Not cached — fetch from CivitAI
         try:
             entry = self._fetch_single(file_hash)
             self._save_cache(entry)
-            return self._entry_to_ui(entry, file_hash, show_images, include_community)
+            return self._entry_to_ui(entry, file_hash, show_images, include_community, show_nsfw)
         except Exception as e:
             err = str(e)
             print(f"[LoRA Keywords] Fetch error for '{lora_file}': {err}")
@@ -824,8 +843,7 @@ class LoraKeywordsFinder(scripts.Script):
             msg = f"✔️ All {total} {plural(total, 'LoRA')} already cached."
             if hash_errors:
                 msg += (
-                    f" ({hash_errors} {plural(hash_errors, 'file')}"
-                    f" could not be read)"
+                    f" ({hash_errors} {plural(hash_errors, 'file')} could not be read)"
                 )
             yield gr.update(value=msg)
             return
@@ -982,7 +1000,8 @@ class LoraKeywordsFinder(scripts.Script):
 
         with gr.Accordion("🧙 LoRA Keywords Finder", open=False):
             # CSS: fix dropdown padding/margin to match textboxes
-            gr.HTML("""<style>
+            gr.HTML(
+                """<style>
             #lkf_lora_dropdown .wrap-inner { padding: 10px !important; }
             #lkf_lora_dropdown .wrap-inner input { margin: 0 !important; }
             .lkf-custom-gallery { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: flex-start !important; gap: 8px !important; width: 100% !important; box-sizing: border-box !important; }
@@ -995,8 +1014,11 @@ class LoraKeywordsFinder(scripts.Script):
             .lkf-img-prompt-container .lkf-img-prompt-btn:hover { background: rgba(0,0,0,0.9) !important; }
             .lkf-opt-col { gap: 8px !important; }
             .lkf-margin-cb { margin: 8px 0 !important; }
-            """ + option_tooltip_css() + """
-            </style>""")
+            """
+                + option_tooltip_css()
+                + """
+            </style>"""
+            )
 
             # ── Row 1: File selector + reload ────────────────────────────────
 
@@ -1172,6 +1194,12 @@ class LoraKeywordsFinder(scripts.Script):
                             do_not_save_to_config=True,
                             elem_classes=option_classes("include-community"),
                         )
+                        show_nsfw_cb = gr.Checkbox(
+                            label="Show NSFW images",
+                            value=lambda: load_config().get("show_nsfw_images", False),
+                            do_not_save_to_config=True,
+                            elem_classes=option_classes("show-nsfw"),
+                        )
 
                 with gr.Row():
                     clear_cache_btn = gr.Button("🗑️ Clear Cache", variant="secondary")
@@ -1239,18 +1267,17 @@ class LoraKeywordsFinder(scripts.Script):
                 outputs=[lora_dropdown],
             )
 
-            def on_show_images_change(lora_file, show_images, include_community):
+            def on_show_images_change(lora_file, show_images, include_community, show_nsfw):
                 cfg = load_config()
                 cfg["show_images"] = show_images
                 cfg["include_community_images"] = include_community
+                cfg["show_nsfw_images"] = show_nsfw
                 save_config(cfg)
-                return self.get_trained_words(
-                    lora_file, show_images, include_community
-                )
+                return self.get_trained_words(lora_file, show_images, include_community, show_nsfw)
 
             show_images_cb.change(
                 fn=on_show_images_change,
-                inputs=[lora_dropdown, show_images_cb, include_community_cb],
+                inputs=[lora_dropdown, show_images_cb, include_community_cb, show_nsfw_cb],
                 outputs=[
                     trained_words_display,
                     name_display,
@@ -1275,7 +1302,32 @@ class LoraKeywordsFinder(scripts.Script):
 
             include_community_cb.change(
                 fn=on_show_images_change,
-                inputs=[lora_dropdown, show_images_cb, include_community_cb],
+                inputs=[lora_dropdown, show_images_cb, include_community_cb, show_nsfw_cb],
+                outputs=[
+                    trained_words_display,
+                    name_display,
+                    base_model_display,
+                    model_type_display,
+                    price_display,
+                    url_display,
+                    download_url_display,
+                    hash_display,
+                    copy_kw_btn,
+                    copy_name_btn,
+                    copy_url_btn,
+                    copy_dl_url_btn,
+                    copy_hash_btn,
+                    copy_to_prompt_btn,
+                    open_url_btn,
+                    open_dl_url_btn,
+                    open_hash_btn,
+                    images_gallery,
+                ],
+            )
+
+            show_nsfw_cb.change(
+                fn=on_show_images_change,
+                inputs=[lora_dropdown, show_images_cb, include_community_cb, show_nsfw_cb],
                 outputs=[
                     trained_words_display,
                     name_display,
@@ -1300,7 +1352,7 @@ class LoraKeywordsFinder(scripts.Script):
 
             lora_dropdown.change(
                 fn=self.get_trained_words,
-                inputs=[lora_dropdown, show_images_cb, include_community_cb],
+                inputs=[lora_dropdown, show_images_cb, include_community_cb, show_nsfw_cb],
                 outputs=[
                     trained_words_display,
                     name_display,
