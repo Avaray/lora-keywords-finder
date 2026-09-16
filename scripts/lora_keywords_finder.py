@@ -435,7 +435,7 @@ class LoraKeywordsFinder(scripts.Script):
             base_model_str = ""
         model_type_str = entry.get("model_type") or ""
         licensing_fee = entry.get("licensing_fee")
-        price_str = "Free" if licensing_fee is None or licensing_fee == 0 else "Paid"
+        price_str = "Paid" if (licensing_fee or 0) > 0 else "Free"
 
         url_str = entry.get("model_url") or MSG_NO_URL
         url_has_data = bool(entry.get("model_url"))
