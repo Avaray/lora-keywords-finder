@@ -22,7 +22,13 @@ def load_config():
                 return json.load(f)
         except Exception:
             pass
-    return {"show_images": True, "show_advanced": True, "gallery_mode": "Official", "skip_dialog": False, "follow_symlinks": False}
+    return {
+        "show_images": True,
+        "show_advanced": True,
+        "gallery_mode": "Official",
+        "skip_dialog": False,
+        "follow_symlinks": False,
+    }
 
 
 def save_config(config):
@@ -99,7 +105,8 @@ class LoraKeywordsFinder(scripts.Script):
         model_url = (
             f"{CIVITAI_MODEL_URL.format(model_id=model_id)}?modelVersionId={version_id}"
             if model_id and version_id
-            else CIVITAI_MODEL_URL.format(model_id=model_id) if model_id
+            else CIVITAI_MODEL_URL.format(model_id=model_id)
+            if model_id
             else None
         )
         model_name = api_data.get("model", {}).get("name")
@@ -232,14 +239,14 @@ class LoraKeywordsFinder(scripts.Script):
             return result
         return {}
 
-    
     def _fetch_community_images(self, version_id: str) -> tuple:
         import requests
+
         str_version_id = str(version_id)
         try:
             resp = requests.get(
                 f"https://civitai.com/api/v1/images?modelVersionId={version_id}&sort=Most%20Reactions&period=AllTime&limit=100&withMeta=true",
-                timeout=5
+                timeout=5,
             )
             if resp.status_code == 200:
                 data = resp.json()
@@ -254,14 +261,20 @@ class LoraKeywordsFinder(scripts.Script):
                     # CivitAI may tag images to a model even if a different version was used.
                     resources = meta.get("civitaiResources", [])
                     if resources:
-                        used_versions = {str(r.get("modelVersionId")) for r in resources if r.get("modelVersionId")}
+                        used_versions = {
+                            str(r.get("modelVersionId"))
+                            for r in resources
+                            if r.get("modelVersionId")
+                        }
                         if str_version_id not in used_versions:
                             continue  # Image was tagged to model but used a different version
-                    valid_images.append({
-                        "url": item.get("url", ""),
-                        "prompt": meta.get("prompt", ""),
-                        "negativePrompt": meta.get("negativePrompt", "")
-                    })
+                    valid_images.append(
+                        {
+                            "url": item.get("url", ""),
+                            "prompt": meta.get("prompt", ""),
+                            "negativePrompt": meta.get("negativePrompt", ""),
+                        }
+                    )
                     if len(valid_images) >= 21:
                         break
                 return valid_images, next_page
@@ -299,21 +312,33 @@ class LoraKeywordsFinder(scripts.Script):
 
     # ── UI action handlers ─────────────────────────────────────────────────────
 
-    def _entry_to_ui(self, entry: dict, file_hash: str, show_images: bool = True, gallery_mode: str = "Official"):
+    def _entry_to_ui(
+        self,
+        entry: dict,
+        file_hash: str,
+        show_images: bool = True,
+        gallery_mode: str = "Official",
+    ):
         images = []
         next_page_attr = ""
         if show_images:
             if gallery_mode == "Community" and entry.get("version_id"):
-                images, next_page = self._fetch_community_images(entry.get("version_id"))
+                images, next_page = self._fetch_community_images(
+                    entry.get("version_id")
+                )
                 if next_page:
                     import urllib.parse
-                    next_page_attr = f' data-next-page="{next_page.replace('"', '&quot;')}"'
-            
-            if not images: # Fallback or Official mode
+
+                    next_page_attr = (
+                        f' data-next-page="{next_page.replace('"', "&quot;")}"'
+                    )
+
+            if not images:  # Fallback or Official mode
                 images = entry.get("images", [])
-        
+
         if images and show_images:
             import urllib.parse
+
             img_tags_list = []
             for idx, item in enumerate(images):
                 if isinstance(item, str):
@@ -324,7 +349,8 @@ class LoraKeywordsFinder(scripts.Script):
                     pos_prompt = item.get("prompt", "")
                     neg_prompt = item.get("negativePrompt", "")
 
-                if not url: continue
+                if not url:
+                    continue
 
                 btn_html = ""
                 if pos_prompt or neg_prompt:
@@ -335,7 +361,7 @@ class LoraKeywordsFinder(scripts.Script):
                     if neg_prompt:
                         neg_enc = urllib.parse.quote(neg_prompt)
                         btn_html += f'<div class="lkf-img-prompt-btn lkf-neg-btn" data-neg="{neg_enc}" title="Send negative prompt to UI">😈</div>'
-                    btn_html += '</div>'
+                    btn_html += "</div>"
 
                 # Carousel classes
                 visible_cls = " lkf-visible" if idx < 3 else ""
@@ -343,15 +369,23 @@ class LoraKeywordsFinder(scripts.Script):
                 img_tags_list.append(tag)
 
             img_tags = "".join(img_tags_list)
-            
+
             # Add carousel arrows
             arrows_html = ""
             if len(images) > 3:
                 arrows_html = '<div class="lkf-carousel-nav left-arrow">◀</div><div class="lkf-carousel-nav right-arrow">▶</div>'
-                
-            mode_label = "Community Images (Popular)" if gallery_mode == "Community" else "Official Example Images"
-            mode_attr = 'data-mode="community"' if gallery_mode == "Community" else ''
-            version_id_attr = f' data-version-id="{entry.get("version_id", "")}"' if gallery_mode == "Community" else ''
+
+            mode_label = (
+                "Community Images (Popular)"
+                if gallery_mode == "Community"
+                else "Images from the model's creator"
+            )
+            mode_attr = 'data-mode="community"' if gallery_mode == "Community" else ""
+            version_id_attr = (
+                f' data-version-id="{entry.get("version_id", "")}"'
+                if gallery_mode == "Community"
+                else ""
+            )
             html_content = f'<span style="display: block; font-size: 14px; font-weight: 500;">{mode_label}</span><div class="lkf-carousel-container" data-current-index="0" {mode_attr}{version_id_attr}{next_page_attr}>{img_tags}{arrows_html}</div>'
             gallery_update = gr.update(value=html_content, visible=True)
         else:
@@ -378,7 +412,7 @@ class LoraKeywordsFinder(scripts.Script):
             base_model_str = ""
         model_type_str = entry.get("model_type") or ""
         licensing_fee = entry.get("licensing_fee")
-        price_str = "Free" if licensing_fee is None else "Paid"
+        price_str = "Free" if licensing_fee is None or licensing_fee == 0 else "Paid"
 
         url_str = entry.get("model_url") or MSG_NO_URL
         url_has_data = bool(entry.get("model_url"))
@@ -752,7 +786,7 @@ class LoraKeywordsFinder(scripts.Script):
                 # ── Row 3: Name [📋 copy] ─────────────────────────────────────────
                 with gr.Row(variant="compact"):
                     name_display = gr.Textbox(
-                        label="Name",
+                        label="Model Name",
                         interactive=False,
                         value="",
                         placeholder="",
@@ -771,10 +805,16 @@ class LoraKeywordsFinder(scripts.Script):
                         max_lines=1,
                     )
                     model_type_display = gr.Textbox(
-                        label="Type", interactive=False, max_lines=1, do_not_save_to_config=True
+                        label="Model Type",
+                        interactive=False,
+                        max_lines=1,
+                        do_not_save_to_config=True,
                     )
                     price_display = gr.Textbox(
-                        label="Price", interactive=False, max_lines=1, do_not_save_to_config=True
+                        label="Access",
+                        interactive=False,
+                        max_lines=1,
+                        do_not_save_to_config=True,
                     )
 
                 gr.HTML("<div style='height: 8px'></div>")
@@ -782,7 +822,7 @@ class LoraKeywordsFinder(scripts.Script):
                 # ── Row 4: CivitAI URL [📋 copy] [🌐 open] ───────────────────────
                 with gr.Row(variant="compact"):
                     url_display = gr.Textbox(
-                        label="CivitAI URL",
+                        label="Model Page",
                         interactive=False,
                         value="",
                         placeholder="",
@@ -913,7 +953,9 @@ class LoraKeywordsFinder(scripts.Script):
                 cfg["skip_dialog"] = skip
                 save_config(cfg)
                 bridge_val = "1" if skip else "0"
-                return gr.update(value=f'<b class="lkf-cfg-skip-dialog">{bridge_val}</b>')
+                return gr.update(
+                    value=f'<b class="lkf-cfg-skip-dialog">{bridge_val}</b>'
+                )
 
             skip_dialog_cb.change(
                 fn=on_skip_dialog_change,
@@ -928,7 +970,9 @@ class LoraKeywordsFinder(scripts.Script):
                 # Reload the file list immediately so new symlinked dirs appear
                 files = self._list_lora_files()
                 choices = [""] + files
-                return gr.update(choices=choices, label=f"File ({len(files)} available)", value="")
+                return gr.update(
+                    choices=choices, label=f"File ({len(files)} available)", value=""
+                )
 
             follow_symlinks_cb.change(
                 fn=on_follow_symlinks_change,
