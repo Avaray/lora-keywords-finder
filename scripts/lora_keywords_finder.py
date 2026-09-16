@@ -1055,12 +1055,14 @@ class LoraKeywordsFinder(scripts.Script):
                         elem_classes=["lkf-btn-copy", "tool"],
                         scale=0,
                         min_width=40,
+                        interactive=False,
                     )
                     open_dl_url_btn = gr.Button(
                         "🌐",
                         elem_classes=["lkf-btn-open-browser", "tool"],
                         scale=0,
                         min_width=40,
+                        interactive=False,
                     )
 
                 gr.HTML("<div style='height: 8px'></div>")
