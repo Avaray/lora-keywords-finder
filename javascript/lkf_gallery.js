@@ -86,7 +86,25 @@ document.addEventListener("click", function(e) {
                             if (pos) btnHtml += `<div class="lkf-img-prompt-btn lkf-pos-btn" data-pos="${pos}" title="Send positive prompt to UI">😇</div>`;
                             if (neg) btnHtml += `<div class="lkf-img-prompt-btn lkf-neg-btn" data-neg="${neg}" title="Send negative prompt to UI">😈</div>`;
                             btnHtml += '</div>';
-                            newHtml += `<div class="lkf-carousel-slide"><div class="lkf-img-wrapper"><a href="${url}" target="_blank"><img src="${url}" loading="lazy"/></a>${btnHtml}</div></div>`;
+                            
+                            const imageId = item.id;
+                            let isNsfw = false;
+                            if (item.nsfw !== undefined) {
+                                isNsfw = !!item.nsfw;
+                            } else if (item.nsfwLevel !== undefined) {
+                                const lvl = parseInt(item.nsfwLevel, 10);
+                                if (!isNaN(lvl)) isNsfw = lvl > 2;
+                                else isNsfw = String(item.nsfwLevel).toLowerCase() !== "none" && String(item.nsfwLevel).toLowerCase() !== "soft";
+                            }
+                            
+                            let linkHtml = "";
+                            if (imageId) {
+                                const domain = isNsfw ? "civitai.red" : "civitai.com";
+                                const linkUrl = `https://${domain}/images/${imageId}`;
+                                linkHtml = `<div class="lkf-img-link-container"><a href="${linkUrl}" class="lkf-img-link-btn" target="_blank" title="Open post on CivitAI">🌐</a></div>`;
+                            }
+                            
+                            newHtml += `<div class="lkf-carousel-slide"><div class="lkf-img-wrapper"><a href="${url}" class="lkf-img-link-main" target="_blank"><img src="${url}" loading="lazy"/></a>${linkHtml}${btnHtml}</div></div>`;
                             added++;
                         });
                         

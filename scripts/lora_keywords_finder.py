@@ -172,6 +172,10 @@ _PLACEHOLDER_PROMPT_WORDS = frozenset(
         "false",
         "no",
         "undefined",
+        "embedded",
+        "empty",
+        "placeholder",
+        "n/a",
     }
 )
 
@@ -509,9 +513,12 @@ class LoraKeywordsFinder(scripts.Script):
                             continue  # Image was tagged to model but used a different version
                     valid_images.append(
                         {
+                            "id": item.get("id"),
                             "url": item.get("url", ""),
                             "prompt": meta.get("prompt", ""),
                             "negativePrompt": meta.get("negativePrompt", ""),
+                            "nsfw": item.get("nsfw"),
+                            "nsfwLevel": item.get("nsfwLevel"),
                         }
                     )
                     if len(valid_images) >= 21:
@@ -611,10 +618,30 @@ class LoraKeywordsFinder(scripts.Script):
                 if isinstance(item, str):
                     url = item
                     pos_prompt, neg_prompt = "", ""
+                    image_id = None
+                    is_nsfw = False
                 else:
                     url = item.get("url", "")
                     pos_prompt = item.get("prompt", "")
                     neg_prompt = item.get("negativePrompt", "")
+
+                    image_id = item.get("id")
+                    if not image_id and url:
+                        basename = url.rsplit("/", 1)[-1]
+                        name = basename.rsplit(".", 1)[0]
+                        if name.isdigit():
+                            image_id = int(name)
+
+                    is_nsfw = False
+                    if "nsfw" in item:
+                        is_nsfw = bool(item.get("nsfw"))
+                    elif "nsfwLevel" in item:
+                        lvl = item.get("nsfwLevel")
+                        try:
+                            lvl = int(lvl)
+                            is_nsfw = lvl > 2
+                        except (ValueError, TypeError):
+                            pass
 
                 if _is_placeholder_prompt(pos_prompt):
                     pos_prompt = ""
@@ -629,6 +656,12 @@ class LoraKeywordsFinder(scripts.Script):
                 # nothing useful to send to the UI.
                 if not pos_prompt and not neg_prompt:
                     continue
+                    
+                link_html = ""
+                if image_id:
+                    domain = "civitai.red" if is_nsfw else "civitai.com"
+                    link_url = f"https://{domain}/images/{image_id}"
+                    link_html = f'<div class="lkf-img-link-container"><a href="{link_url}" class="lkf-img-link-btn" target="_blank" title="Open post on CivitAI">🌐</a></div>'
 
                 btn_html = '<div class="lkf-img-prompt-container">'
                 if pos_prompt:
@@ -644,7 +677,7 @@ class LoraKeywordsFinder(scripts.Script):
                 # Carousel classes — based on position among the KEPT images,
                 # not the raw list, since some images above may have been skipped.
                 visible_cls = " lkf-visible" if len(img_tags_list) < 3 else ""
-                tag = f'<div class="lkf-carousel-slide{visible_cls}"><div class="lkf-img-wrapper"><a href="{url}" target="_blank"><img src="{url}" loading="lazy"/></a>{btn_html}</div></div>'
+                tag = f'<div class="lkf-carousel-slide{visible_cls}"><div class="lkf-img-wrapper"><a href="{url}" class="lkf-img-link-main" target="_blank"><img src="{url}" loading="lazy"/></a>{link_html}{btn_html}</div></div>'
                 img_tags_list.append(tag)
 
             img_tags = "".join(img_tags_list)
@@ -1064,10 +1097,13 @@ class LoraKeywordsFinder(scripts.Script):
             .lkf-custom-gallery { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: flex-start !important; gap: 8px !important; width: 100% !important; box-sizing: border-box !important; }
             
             .lkf-custom-gallery img { width: 100% !important; height: 250px !important; object-fit: cover !important; display: block !important; }
-            .lkf-img-wrapper { position: relative !important; flex: 1 1 0 !important; max-width: 33.33% !important; overflow: hidden !important; border-radius: 0.5em !important; }
-            .lkf-img-wrapper a { display: block !important; width: 100% !important; height: 100% !important; overflow: hidden !important; border-radius: 0.5em !important; }
-            .lkf-img-prompt-container { position: absolute !important; top: 6px !important; right: 6px !important; display: flex !important; gap: 4px !important; z-index: 10 !important; }
-.lkf-img-prompt-container .lkf-img-prompt-btn { position: relative !important; top: auto !important; right: auto !important; background: rgba(0,0,0,0.6) !important; color: white !important; border: none !important; border-radius: 4px !important; padding: 4px 8px !important; cursor: pointer !important; font-size: 16px !important; transition: background 0.2s !important; }
+            .lkf-img-wrapper { position: relative !important; flex: 1 1 0 !important; max-width: 33.33% !important; overflow: visible !important; border-radius: 0.5em !important; }
+            .lkf-img-wrapper a.lkf-img-link-main { display: block !important; width: 100% !important; height: 100% !important; overflow: hidden !important; border-radius: 0.5em !important; position: relative !important; z-index: 0 !important; }
+            .lkf-img-link-container { position: absolute !important; top: 6px !important; left: 6px !important; display: flex !important; z-index: 10 !important; pointer-events: auto !important; }
+            .lkf-img-link-container a.lkf-img-link-btn { background: rgba(0,0,0,0.6) !important; color: white !important; border-radius: 4px !important; padding: 0 !important; text-decoration: none !important; font-size: 16px !important; transition: background 0.2s !important; display: flex !important; align-items: center !important; justify-content: center !important; width: 32px !important; height: 32px !important; aspect-ratio: 1/1 !important; box-sizing: border-box !important; pointer-events: auto !important; }
+            .lkf-img-link-container a.lkf-img-link-btn:hover { background: rgba(0,0,0,0.9) !important; }
+            .lkf-img-prompt-container { position: absolute !important; top: 6px !important; right: 6px !important; display: flex !important; gap: 4px !important; z-index: 10 !important; pointer-events: auto !important; }
+.lkf-img-prompt-container .lkf-img-prompt-btn { position: relative !important; top: auto !important; right: auto !important; background: rgba(0,0,0,0.6) !important; color: white !important; border: none !important; border-radius: 4px !important; padding: 0 !important; cursor: pointer !important; font-size: 16px !important; transition: background 0.2s !important; display: flex !important; align-items: center !important; justify-content: center !important; width: 32px !important; height: 32px !important; aspect-ratio: 1/1 !important; box-sizing: border-box !important; pointer-events: auto !important; }
             .lkf-img-prompt-container .lkf-img-prompt-btn:hover { background: rgba(0,0,0,0.9) !important; }
             .lkf-opt-row { row-gap: 8px !important; margin-bottom: 8px !important; }
             .lkf-opt-col { gap: 8px !important; }
