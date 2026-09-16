@@ -447,6 +447,19 @@ class LoraKeywordsFinder(scripts.Script):
             return result
         return {}
 
+    _ALLOWED_IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
+
+    @staticmethod
+    def _is_allowed_image_url(url: str) -> bool:
+        """Return True only if the URL's path ends with an allowed image extension."""
+        if not url:
+            return False
+        from urllib.parse import urlparse
+        path = urlparse(url).path.lower()
+        # Strip query parameters that some CDNs append (e.g. /image.jpeg?width=…)
+        ext = "." + path.rsplit(".", 1)[-1] if "." in path else ""
+        return ext in LoraKeywordsFinder._ALLOWED_IMAGE_EXTS
+
     def _fetch_community_images(self, version_id: str, show_nsfw: bool = False) -> tuple:
         import requests
 
@@ -567,6 +580,8 @@ class LoraKeywordsFinder(scripts.Script):
             seen_urls = set()
             for item in (*official_images, *community_images):
                 url = item if isinstance(item, str) else item.get("url", "")
+                if not self._is_allowed_image_url(url):
+                    continue
                 if url and url in seen_urls:
                     continue
                 if url:
@@ -627,7 +642,7 @@ class LoraKeywordsFinder(scripts.Script):
             # Add carousel arrows
             arrows_html = ""
             if len(img_tags_list) > 3:
-                arrows_html = '<div class="lkf-carousel-nav left-arrow">◀</div><div class="lkf-carousel-nav right-arrow">▶</div>'
+                arrows_html = '<div class="lkf-carousel-nav left-arrow" style="color:white !important; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center;">◀</div><div class="lkf-carousel-nav right-arrow" style="color:white !important; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center;">▶</div>'
 
             has_official = bool(official_images)
             if using_community and has_official:
