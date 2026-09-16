@@ -38,7 +38,8 @@ Primarily created for [Forge Neo](https://github.com/Haoming02/sd-webui-forge-cl
 
 1. The extension will be visible in your **txt2img** and **img2img** tabs under the **🧙 LoRA Keywords Finder** accordion.
 2. Select any local LoRA file from the dropdown list.
-3. Fetched keywords, example images, and technical details will appear below. 
+3. Fetched keywords, example images, and technical details will appear below.
+4. Optionally, expand the **Advanced Options** section for customization.
 
 ## 📝 Notes
 
