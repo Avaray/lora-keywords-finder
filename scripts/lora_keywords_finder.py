@@ -1012,8 +1012,9 @@ class LoraKeywordsFinder(scripts.Script):
             .lkf-img-prompt-container { position: absolute !important; top: 6px !important; right: 6px !important; display: flex !important; gap: 4px !important; z-index: 10 !important; }
 .lkf-img-prompt-container .lkf-img-prompt-btn { position: relative !important; top: auto !important; right: auto !important; background: rgba(0,0,0,0.6) !important; color: white !important; border: none !important; border-radius: 4px !important; padding: 4px 8px !important; cursor: pointer !important; font-size: 16px !important; transition: background 0.2s !important; }
             .lkf-img-prompt-container .lkf-img-prompt-btn:hover { background: rgba(0,0,0,0.9) !important; }
+            .lkf-opt-row { row-gap: 8px !important; margin-bottom: 8px !important; }
             .lkf-opt-col { gap: 8px !important; }
-            .lkf-opt-col .lkf-margin-cb { margin: 0 0 8px 0 !important; }
+            .lkf-opt-col .lkf-margin-cb { margin: 0 !important; }
             """
                 + option_tooltip_css()
                 + """
@@ -1161,7 +1162,7 @@ class LoraKeywordsFinder(scripts.Script):
 
             # ── Advanced Options ──────────────────────────────────────────────
             with gr.Accordion("⚙️ Advanced Options", open=False):
-                with gr.Row():
+                with gr.Row(elem_classes=["lkf-opt-row"]):
                     with gr.Column(elem_classes=["lkf-opt-col"]):
                         show_adv_fields_cb = gr.Checkbox(
                             label="Show advanced fields",
