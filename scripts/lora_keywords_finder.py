@@ -644,7 +644,7 @@ class LoraKeywordsFinder(scripts.Script):
             # Add carousel arrows
             arrows_html = ""
             if len(img_tags_list) > 3:
-                arrows_html = '<div class="lkf-carousel-nav left-arrow" style="color:white !important; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center;">◀</div><div class="lkf-carousel-nav right-arrow" style="color:white !important; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center;">▶</div>'
+                arrows_html = '<div class="lkf-carousel-nav left-arrow" style="color:white !important; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center;">🠈</div><div class="lkf-carousel-nav right-arrow" style="color:white !important; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center;">🠊</div>'
 
             has_official = bool(official_images)
             if using_community and has_official:
