@@ -1069,6 +1069,9 @@ class LoraKeywordsFinder(scripts.Script):
                 margin-bottom: 4px !important;
                 display: inline-block !important;
             }
+            .lkf-field textarea {
+                resize: none !important;
+            }
             """
                 + option_tooltip_css()
                 + """
@@ -1099,6 +1102,7 @@ class LoraKeywordsFinder(scripts.Script):
                 trained_words_display = gr.Textbox(
                     label="Keywords",
                     interactive=False,
+                    lines=1,
                     value="",
                     placeholder="Select a file to find its keywords",
                     elem_classes=["lkf-field"],
@@ -1120,6 +1124,7 @@ class LoraKeywordsFinder(scripts.Script):
                     name_display = gr.Textbox(
                         label="Model Name",
                         interactive=False,
+                        lines=1,
                         value="",
                         placeholder="",
                         elem_classes=["lkf-field"],
@@ -1160,6 +1165,7 @@ class LoraKeywordsFinder(scripts.Script):
                     url_display = gr.Textbox(
                         label="Model Page",
                         interactive=False,
+                        max_lines=1,
                         value="",
                         placeholder="",
                         elem_classes=["lkf-field"],
@@ -1205,6 +1211,7 @@ class LoraKeywordsFinder(scripts.Script):
                     hash_display = gr.Textbox(
                         label="SHA-256",
                         interactive=False,
+                        max_lines=1,
                         value="",
                         placeholder="",
                         elem_classes=["lkf-field"],
