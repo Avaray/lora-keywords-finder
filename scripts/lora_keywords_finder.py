@@ -53,11 +53,11 @@ def load_config():
                     config.pop("gallery_mode", None)
             else:
                 print(
-                    "[LoRA Keywords] config.json has an unexpected format"
+                    "[🧙 LoRA Keywords Finder] config.json has an unexpected format"
                     " — falling back to defaults"
                 )
         except Exception as e:
-            print(f"[LoRA Keywords] Could not read config.json ({e}) — using defaults")
+            print(f"[🧙 LoRA Keywords Finder] Could not read config.json ({e}) — using defaults")
     return config
 
 
@@ -71,7 +71,7 @@ def save_config(config):
             os.fsync(f.fileno())
         os.replace(tmp_file, config_file)
     except Exception as e:
-        print(f"[LoRA Keywords] Could not save config.json: {e}")
+        print(f"[🧙 LoRA Keywords Finder] Could not save config.json: {e}")
         try:
             os.remove(tmp_file)
         except OSError:
@@ -301,7 +301,7 @@ class LoraKeywordsFinder(scripts.Script):
     def _walk_error(self, err):
         """os.walk ignores filesystem errors by default — report them instead."""
         path = getattr(err, "filename", "?")
-        print(f"[LoRA Keywords] Could not read '{path}': {err}")
+        print(f"[🧙 LoRA Keywords Finder] Could not read '{path}': {err}")
 
     def _dir_key(self, path: str):
         """(device, inode) identity of a directory, or None when unreadable."""
@@ -309,7 +309,7 @@ class LoraKeywordsFinder(scripts.Script):
             st = os.stat(path)
             return (st.st_dev, st.st_ino)
         except OSError as e:
-            print(f"[LoRA Keywords] Could not stat '{path}': {e}")
+            print(f"[🧙 LoRA Keywords Finder] Could not stat '{path}': {e}")
             return None
 
     def _wait_for_symlinks(self, lora_dir: str, attempts: int = 4, delay: float = 0.5):
@@ -336,13 +336,13 @@ class LoraKeywordsFinder(scripts.Script):
                         if entry.is_symlink() and not os.path.exists(entry.path):
                             pending.append(entry.path)
             except Exception as e:
-                print(f"[LoRA Keywords] Could not scan '{lora_dir}': {e}")
+                print(f"[🧙 LoRA Keywords Finder] Could not scan '{lora_dir}': {e}")
                 return
             if not pending:
                 return
             if attempt < attempts - 1:
                 print(
-                    f"[LoRA Keywords] Waiting for {len(pending)}"
+                    f"[🧙 LoRA Keywords Finder] Waiting for {len(pending)}"
                     f" unresolved symlink {plural(len(pending), 'target')}…"
                 )
                 time.sleep(delay)
@@ -352,7 +352,7 @@ class LoraKeywordsFinder(scripts.Script):
             except OSError:
                 target = "?"
             print(
-                f"[LoRA Keywords] Symlink target unavailable (broken or not"
+                f"[🧙 LoRA Keywords Finder] Symlink target unavailable (broken or not"
                 f" mounted): '{path}' -> '{target}'"
             )
 
@@ -407,7 +407,7 @@ class LoraKeywordsFinder(scripts.Script):
         )
         result = root_files + subdir_files
         print(
-            f"[LoRA Keywords] Listed {len(result)} {plural(len(result), 'file')}"
+            f"[🧙 LoRA Keywords Finder] Listed {len(result)} {plural(len(result), 'file')}"
             f" in '{lora_dir}' (follow symlinks: {'on' if follow_symlinks else 'off'})"
         )
         return result
@@ -495,7 +495,7 @@ class LoraKeywordsFinder(scripts.Script):
                         break
                 return valid_images, next_page
         except Exception as e:
-            print(f"[LoRA Keywords] Error fetching community images: {e}")
+            print(f"[🧙 LoRA Keywords Finder] Error fetching community images: {e}")
         return [], ""
 
     def _fetch_batch_chunk(self, chunk: list) -> tuple:
@@ -517,11 +517,11 @@ class LoraKeywordsFinder(scripts.Script):
                 if resp.status_code == 200:
                     return True, self._parse_batch_response(resp.json())
                 print(
-                    f"[LoRA Keywords] Batch attempt {attempt + 1} failed:"
+                    f"[🧙 LoRA Keywords Finder] Batch attempt {attempt + 1} failed:"
                     f" HTTP {resp.status_code}"
                 )
             except Exception as e:
-                print(f"[LoRA Keywords] Batch attempt {attempt + 1} exception: {e}")
+                print(f"[🧙 LoRA Keywords Finder] Batch attempt {attempt + 1} exception: {e}")
             if attempt == 0:
                 time.sleep(1)
         return False, {}
@@ -735,7 +735,7 @@ class LoraKeywordsFinder(scripts.Script):
         try:
             file_hash = self._hash_file(full_path)
         except FileNotFoundError:
-            print(f"[LoRA Keywords] File not found: {full_path}")
+            print(f"[🧙 LoRA Keywords Finder] File not found: {full_path}")
             return (
                 gr.update(value="Error: File not found"),
                 gr.update(value=""),
@@ -749,7 +749,7 @@ class LoraKeywordsFinder(scripts.Script):
                 gr.update(value="", visible=False),
             )
         except Exception as e:
-            print(f"[LoRA Keywords] Error hashing {full_path}: {e}")
+            print(f"[🧙 LoRA Keywords Finder] Error hashing {full_path}: {e}")
             return (
                 gr.update(value="Error reading file"),
                 gr.update(value=""),
@@ -763,11 +763,11 @@ class LoraKeywordsFinder(scripts.Script):
                 gr.update(value="", visible=False),
             )
 
-        print(f"[LoRA Keywords] Selected '{lora_file}', hash: {file_hash}")
+        print(f"[🧙 LoRA Keywords Finder] Selected '{lora_file}', hash: {file_hash}")
 
         cached = self._load_cache(file_hash)
         if cached is not None:
-            print(f"[LoRA Keywords] Loaded from cache for '{lora_file}'")
+            print(f"[🧙 LoRA Keywords Finder] Loaded from cache for '{lora_file}'")
             return self._entry_to_ui(cached, file_hash, show_images, include_community, show_nsfw)
 
         # Not cached — fetch from CivitAI
@@ -777,7 +777,7 @@ class LoraKeywordsFinder(scripts.Script):
             return self._entry_to_ui(entry, file_hash, show_images, include_community, show_nsfw)
         except Exception as e:
             err = str(e)
-            print(f"[LoRA Keywords] Fetch error for '{lora_file}': {err}")
+            print(f"[🧙 LoRA Keywords Finder] Fetch error for '{lora_file}': {err}")
             msg = (
                 f"CivitAI API error ({err})"
                 if err.startswith("HTTP")
@@ -804,9 +804,9 @@ class LoraKeywordsFinder(scripts.Script):
                     os.remove(os.path.join(cache_dir, fname))
                     removed += 1
                 except Exception as e:
-                    print(f"[LoRA Keywords] Could not delete {fname}: {e}")
+                    print(f"[🧙 LoRA Keywords Finder] Could not delete {fname}: {e}")
         removed_files = f"{removed} {plural(removed, 'file')}"
-        print(f"[LoRA Keywords] Cache cleared: {removed_files} removed")
+        print(f"[🧙 LoRA Keywords Finder] Cache cleared: {removed_files} removed")
         return gr.update(value=f"✔️ Cache cleared — {removed_files} removed")
 
     def fetch_all_metadata(self):
@@ -831,7 +831,7 @@ class LoraKeywordsFinder(scripts.Script):
             try:
                 h = self._hash_file(full_path)
             except Exception as e:
-                print(f"[LoRA Keywords] Cannot hash '{lora_file}': {e}")
+                print(f"[🧙 LoRA Keywords Finder] Cannot hash '{lora_file}': {e}")
                 hash_errors += 1
                 continue
             if self._load_cache(h) is not None:
@@ -875,7 +875,7 @@ class LoraKeywordsFinder(scripts.Script):
             if not batch_ok:
                 # Batch endpoint failed — fall back to individual requests
                 print(
-                    f"[LoRA Keywords] Batch {chunk_index + 1} failed;"
+                    f"[🧙 LoRA Keywords Finder] Batch {chunk_index + 1} failed;"
                     f" falling back to individual requests for {len(chunk)}"
                     f" {plural(len(chunk), 'hash', 'es')}"
                 )
@@ -886,7 +886,7 @@ class LoraKeywordsFinder(scripts.Script):
                     try:
                         entry = self._fetch_single(h)
                     except Exception as e:
-                        print(f"[LoRA Keywords] Individual fetch failed for {h}: {e}")
+                        print(f"[🧙 LoRA Keywords Finder] Individual fetch failed for {h}: {e}")
                         entry = self._not_found_entry(h)
                         api_errors += 1
                     self._save_cache(entry)
@@ -917,7 +917,7 @@ class LoraKeywordsFinder(scripts.Script):
         if api_errors:
             parts.append(f"API errors: {api_errors}.")
         status = " ".join(parts)
-        print(f"[LoRA Keywords] Fetch all complete — {status}")
+        print(f"[🧙 LoRA Keywords Finder] Fetch all complete — {status}")
         yield gr.update(value=status)
 
     # ── UI ─────────────────────────────────────────────────────────────────────
@@ -1013,7 +1013,7 @@ class LoraKeywordsFinder(scripts.Script):
 .lkf-img-prompt-container .lkf-img-prompt-btn { position: relative !important; top: auto !important; right: auto !important; background: rgba(0,0,0,0.6) !important; color: white !important; border: none !important; border-radius: 4px !important; padding: 4px 8px !important; cursor: pointer !important; font-size: 16px !important; transition: background 0.2s !important; }
             .lkf-img-prompt-container .lkf-img-prompt-btn:hover { background: rgba(0,0,0,0.9) !important; }
             .lkf-opt-col { gap: 8px !important; }
-            .lkf-margin-cb { margin: 8px 0 !important; }
+            .lkf-opt-col .lkf-margin-cb { margin: 0 0 8px 0 !important; }
             """
                 + option_tooltip_css()
                 + """
@@ -1462,4 +1462,4 @@ class LoraKeywordsFinder(scripts.Script):
 # Reaching this line means the whole module — including the class body above —
 # executed without raising, so the extension is actually usable. A print inside
 # __init__ would fire once per tab (txt2img/img2img) instead of once at startup.
-print("[LoRA Keywords] Extension loaded successfully.")
+print("[🧙 LoRA Keywords Finder] Extension loaded successfully.")
