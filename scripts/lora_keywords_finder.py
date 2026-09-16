@@ -13,30 +13,60 @@ cache_dir = os.path.join(scripts.basedir(), "metadata_cache")
 os.makedirs(cache_dir, exist_ok=True)
 config_file = os.path.join(scripts.basedir(), "config.json")
 
+# True once the directory has been scanned; only the first scan waits for
+# symlink targets that are not mounted yet (see _wait_for_symlinks).
+symlink_wait_done = False
+
+
+DEFAULT_CONFIG = {
+    "show_images": True,
+    "show_advanced": True,
+    "gallery_mode": "Official",
+    "skip_dialog": False,
+    "follow_symlinks": False,
+}
+
 
 def load_config():
+    """
+    Read config.json on top of DEFAULT_CONFIG.
+
+    Missing keys fall back to their default, but keys that *are* stored always
+    win — a config written by an older version never silently resets the rest
+    of the settings. A damaged file is reported instead of being swallowed.
+    """
+    config = dict(DEFAULT_CONFIG)
     if os.path.exists(config_file):
         try:
-            import json
-
-            with open(config_file, "r") as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return {
-        "show_images": True,
-        "show_advanced": True,
-        "gallery_mode": "Official",
-        "skip_dialog": False,
-        "follow_symlinks": False,
-    }
+            with open(config_file, "r", encoding="utf-8") as f:
+                stored = json.load(f)
+            if isinstance(stored, dict):
+                config.update(stored)
+            else:
+                print(
+                    "[LoRA Keywords] config.json has an unexpected format"
+                    " — falling back to defaults"
+                )
+        except Exception as e:
+            print(f"[LoRA Keywords] Could not read config.json ({e}) — using defaults")
+    return config
 
 
 def save_config(config):
-    import json
-
-    with open(config_file, "w") as f:
-        json.dump(config, f)
+    """Write config.json atomically so a crash can never leave a truncated file."""
+    tmp_file = f"{config_file}.tmp"
+    try:
+        with open(tmp_file, "w", encoding="utf-8") as f:
+            json.dump(config, f, ensure_ascii=False, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_file, config_file)
+    except Exception as e:
+        print(f"[LoRA Keywords] Could not save config.json: {e}")
+        try:
+            os.remove(tmp_file)
+        except OSError:
+            pass
 
 
 def plural(count: int, word: str, suffix: str = "s") -> str:
@@ -191,11 +221,90 @@ class LoraKeywordsFinder(scripts.Script):
         with open(full_path, "rb") as f:
             return hashlib.sha256(f.read()).hexdigest()
 
+    def _walk_error(self, err):
+        """os.walk ignores filesystem errors by default — report them instead."""
+        path = getattr(err, "filename", "?")
+        print(f"[LoRA Keywords] Could not read '{path}': {err}")
+
+    def _dir_key(self, path: str):
+        """(device, inode) identity of a directory, or None when unreadable."""
+        try:
+            st = os.stat(path)
+            return (st.st_dev, st.st_ino)
+        except OSError as e:
+            print(f"[LoRA Keywords] Could not stat '{path}': {e}")
+            return None
+
+    def _wait_for_symlinks(self, lora_dir: str, attempts: int = 4, delay: float = 0.5):
+        """
+        A symlink pointing at a network share, an external drive or a mount that
+        is still coming up resolves to nothing right after startup — the scan
+        then silently skips it. Give such targets a moment before walking, and
+        report the ones that never showed up.
+
+        Only the first scan waits; later scans (🔄, toggling the checkbox) just
+        report, so a permanently broken link never stalls the UI.
+        """
+        global symlink_wait_done
+        if symlink_wait_done:
+            attempts = 1
+        symlink_wait_done = True
+
+        pending = []
+        for attempt in range(attempts):
+            pending = []
+            try:
+                with os.scandir(lora_dir) as entries:
+                    for entry in entries:
+                        if entry.is_symlink() and not os.path.exists(entry.path):
+                            pending.append(entry.path)
+            except Exception as e:
+                print(f"[LoRA Keywords] Could not scan '{lora_dir}': {e}")
+                return
+            if not pending:
+                return
+            if attempt < attempts - 1:
+                print(
+                    f"[LoRA Keywords] Waiting for {len(pending)}"
+                    f" unresolved symlink {plural(len(pending), 'target')}…"
+                )
+                time.sleep(delay)
+        for path in pending:
+            try:
+                target = os.readlink(path)
+            except OSError:
+                target = "?"
+            print(
+                f"[LoRA Keywords] Symlink target unavailable (broken or not"
+                f" mounted): '{path}' -> '{target}'"
+            )
+
     def _list_lora_files(self):
         lora_dir = shared.cmd_opts.lora_dir
         follow_symlinks = load_config().get("follow_symlinks", False)
+        if follow_symlinks:
+            self._wait_for_symlinks(lora_dir)
+
+        visited_dirs = set()
+        root_key = self._dir_key(lora_dir)
+        if root_key:
+            visited_dirs.add(root_key)
+
         root_files, subdir_files = [], []
-        for root, _, files in os.walk(lora_dir, followlinks=follow_symlinks):
+        for root, dirs, files in os.walk(
+            lora_dir, followlinks=follow_symlinks, onerror=self._walk_error
+        ):
+            if follow_symlinks:
+                # Following links can revisit a directory through a second path
+                # or loop forever — keep each real directory exactly once.
+                keep = []
+                for d in dirs:
+                    key = self._dir_key(os.path.join(root, d))
+                    if key is None or key in visited_dirs:
+                        continue
+                    visited_dirs.add(key)
+                    keep.append(d)
+                dirs[:] = keep
             for filename in files:
                 if filename.lower().endswith(
                     (
@@ -219,7 +328,12 @@ class LoraKeywordsFinder(scripts.Script):
         subdir_files.sort(
             key=lambda x: tuple(p.lower() for p in os.path.normpath(x).split(os.sep))
         )
-        return root_files + subdir_files
+        result = root_files + subdir_files
+        print(
+            f"[LoRA Keywords] Listed {len(result)} {plural(len(result), 'file')}"
+            f" in '{lora_dir}' (follow symlinks: {'on' if follow_symlinks else 'off'})"
+        )
+        return result
 
     # ── Single-hash API fetch ──────────────────────────────────────────────────
 
@@ -788,7 +902,9 @@ class LoraKeywordsFinder(scripts.Script):
                     value="",
                     type="value",
                 )
-                reload_loras = gr.Button("🔄", scale=0, elem_classes=["tool"])
+                reload_loras = gr.Button(
+                    "🔄", scale=0, elem_classes=["tool", "lkf-reload-btn"]
+                )
 
             gr.HTML("<div style='height: 8px'></div>")
 
