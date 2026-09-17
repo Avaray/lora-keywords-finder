@@ -66,15 +66,38 @@ def load_config():
 
 def save_config(config):
     """Write config.json atomically so a crash can never leave a truncated file."""
-    tmp_file = f"{config_file}.tmp"
+    import time
+    tmp_file = f"{config_file}.{threading.get_ident()}.tmp"
     try:
         with open(tmp_file, "w", encoding="utf-8") as f:
             json.dump(config, f, ensure_ascii=False, indent=2)
             f.flush()
             os.fsync(f.fileno())
-        os.replace(tmp_file, config_file)
+            
+        for attempt in range(5):
+            try:
+                os.replace(tmp_file, config_file)
+                break
+            except Exception as e:
+                win_err = getattr(e, "winerror", None)
+                errno = getattr(e, "errno", None)
+                if win_err == 32 or errno in (11, 13, 16):
+                    if attempt < 4:
+                        time.sleep(0.05)
+                        continue
+                raise
+                
     except Exception as e:
-        print(f"[🧙 LoRA Keywords Finder] Could not save config.json: {e}")
+        # File locked / sharing violation (Windows + Linux)
+        win_err = getattr(e, "winerror", None)
+        errno = getattr(e, "errno", None)
+        if win_err == 32 or errno in (11, 13, 16):  # EAGAIN, EACCES, EBUSY
+            print(
+                "[🧙 LoRA Keywords Finder] Could not save config.json — "
+                "the file is locked by another process. Close any other Stable Diffusion windows or editors and try again."
+            )
+        else:
+            print(f"[🧙 LoRA Keywords Finder] Could not save config.json: {e}")
         try:
             os.remove(tmp_file)
         except OSError:
@@ -393,9 +416,20 @@ class LoraKeywordsFinder(scripts.Script):
                 f" mounted): '{path}' -> '{target}'"
             )
 
-    def _list_lora_files(self):
+    _cached_lora_files = None
+    _cached_lora_time = 0.0
+    _cached_symlink_state = None
+
+    def _list_lora_files(self, force_reload=False):
+        import time
         lora_dir = shared.cmd_opts.lora_dir
         follow_symlinks = load_config().get("follow_symlinks", False)
+        
+        if not force_reload and LoraKeywordsFinder._cached_lora_files is not None:
+            if LoraKeywordsFinder._cached_symlink_state == follow_symlinks:
+                if time.time() - LoraKeywordsFinder._cached_lora_time < 5.0:
+                    return list(LoraKeywordsFinder._cached_lora_files)
+
         if follow_symlinks:
             self._wait_for_symlinks(lora_dir)
 
@@ -447,6 +481,12 @@ class LoraKeywordsFinder(scripts.Script):
             f"[🧙 LoRA Keywords Finder] Listed {len(result)} {plural(len(result), 'file')}"
             f" in '{lora_dir}' (follow symlinks: {'on' if follow_symlinks else 'off'})"
         )
+        
+        LoraKeywordsFinder._cached_lora_files = list(result)
+        LoraKeywordsFinder._cached_symlink_state = follow_symlinks
+        import time
+        LoraKeywordsFinder._cached_lora_time = time.time()
+        
         return result
 
     # ── Single-hash API fetch ──────────────────────────────────────────────────
@@ -832,7 +872,7 @@ class LoraKeywordsFinder(scripts.Script):
         return tuple(gr.update(interactive=False) for _ in range(9))
 
     def reload_lora_list(self):
-        files = self._list_lora_files()
+        files = self._list_lora_files(force_reload=True)
         choices = [""] + files
         return gr.update(
             choices=choices, value="", label=f"File ({len(files)} available)"
@@ -956,7 +996,7 @@ class LoraKeywordsFinder(scripts.Script):
         # Clear any leftover cancel signal from a previous run.
         self._cancel_fetch.clear()
 
-        lora_files = self._list_lora_files()
+        lora_files = self._list_lora_files(force_reload=True)
         total = len(lora_files)
         if total == 0:
             yield gr.update(value="No LoRA files found.")
