@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.8.0] - 2026-09-17
+
+### Added
+- **CivitAI API Error Feedback**: When the CivitAI image search API returns a temporary error (e.g. overload), the gallery now displays a clear placeholder message instead of silently showing nothing.
+
+### Changed
+- **Community Image Pagination is Error-Safe**: The infinite scroll no longer advances the `nextPage` cursor or marks the gallery as exhausted when the API returns an error response. The same page will be retried on the next scroll instead of permanently losing images.
+- **Robust Config Saving**: `config.json` is now saved using a per-thread temporary file, eliminating race conditions when multiple tabs start simultaneously. If the file is momentarily locked on Windows, the save is automatically retried up to 5 times before reporting an error.
+- **LoRA File List Caching**: The LoRA directory scan now caches its result for 5 seconds. This prevents the 4 redundant filesystem scans (2 UI tabs × 2 Gradio initialization passes) that occurred on every startup, reducing startup overhead.
+
+### Fixed
+- Fixed startup log spam caused by `config.json` write conflicts when Gradio initialized both the txt2img and img2img tabs simultaneously.
+- Fixed a bug where `config.json.tmp` could be deleted by a concurrent thread before `os.replace` was called, causing a `[WinError 2]` file-not-found error at startup.
+
 ## [2.7.0] - 2026-09-17
 
 ### Added
@@ -169,7 +183,8 @@ All notable changes to this project will be documented in this file.
 - **⚡️ Copy to Prompt** button — appends fetched keywords to the active txt2img or img2img prompt textarea.
 - Support for ForgeUI and other AUTOMATIC1111-based UIs.
 
-[Unreleased]: https://github.com/Avaray/lora-keywords-finder/compare/v2.7.0...main
+[Unreleased]: https://github.com/Avaray/lora-keywords-finder/compare/v2.8.0...main
+[2.8.0]: https://github.com/Avaray/lora-keywords-finder/compare/v2.7.0...v2.8.0
 [2.7.0]: https://github.com/Avaray/lora-keywords-finder/compare/v2.6.0...v2.7.0
 [2.6.0]: https://github.com/Avaray/lora-keywords-finder/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/Avaray/lora-keywords-finder/compare/v2.4.0...v2.5.0
