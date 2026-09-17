@@ -1,0 +1,7 @@
+line-length = 250
+
+[format]
+skip-magic-trailing-comma = true
+
+[lint.isort]
+split-on-trailing-comma = false

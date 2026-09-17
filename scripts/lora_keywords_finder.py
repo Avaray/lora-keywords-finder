@@ -19,14 +19,7 @@ config_file = os.path.join(scripts.basedir(), "config.json")
 symlink_wait_done = False
 
 
-DEFAULT_CONFIG = {
-    "show_images": True,
-    "show_advanced": False,
-    "include_community_images": False,
-    "show_nsfw_images": False,
-    "skip_dialog": False,
-    "follow_symlinks": False,
-}
+DEFAULT_CONFIG = {"show_images": True, "show_advanced": False, "include_community_images": False, "show_nsfw_images": False, "skip_dialog": False, "follow_symlinks": False}
 
 
 def load_config():
@@ -48,19 +41,12 @@ def load_config():
                 # "Community") to the "Include community images" checkbox.
                 if "gallery_mode" in config:
                     if "include_community_images" not in stored:
-                        config["include_community_images"] = (
-                            config["gallery_mode"] == "Community"
-                        )
+                        config["include_community_images"] = config["gallery_mode"] == "Community"
                     config.pop("gallery_mode", None)
             else:
-                print(
-                    "[🧙 LoRA Keywords Finder] config.json has an unexpected format"
-                    " — falling back to defaults"
-                )
+                print("[🧙 LoRA Keywords Finder] config.json has an unexpected format — falling back to defaults")
         except Exception as e:
-            print(
-                f"[🧙 LoRA Keywords Finder] Could not read config.json ({e}) — using defaults"
-            )
+            print(f"[🧙 LoRA Keywords Finder] Could not read config.json ({e}) — using defaults")
     return config
 
 
@@ -93,10 +79,7 @@ def save_config(config):
         win_err = getattr(e, "winerror", None)
         errno = getattr(e, "errno", None)
         if win_err == 32 or errno in (11, 13, 16):  # EAGAIN, EACCES, EBUSY
-            print(
-                "[🧙 LoRA Keywords Finder] Could not save config.json — "
-                "the file is locked by another process. Close any other Stable Diffusion windows or editors and try again."
-            )
+            print("[🧙 LoRA Keywords Finder] Could not save config.json — the file is locked by another process. Close any other Stable Diffusion windows or editors and try again.")
         else:
             print(f"[🧙 LoRA Keywords Finder] Could not save config.json: {e}")
         try:
@@ -179,9 +162,7 @@ def option_tooltip_css() -> str:
         " text-align: left !important; pointer-events: none !important;"
         " opacity: 0 !important; visibility: hidden !important;"
         " transition: opacity 0.15s ease !important; }",
-        ".lkf-opt:hover::after {"
-        " opacity: 1 !important; visibility: visible !important;"
-        " transition-delay: 0.4s !important; }",
+        ".lkf-opt:hover::after { opacity: 1 !important; visibility: visible !important; transition-delay: 0.4s !important; }",
     ]
     for key, text in OPTION_TOOLTIPS.items():
         content = text.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\A ")
@@ -198,33 +179,13 @@ MSG_NO_NAME = "Not available"
 MSG_NO_URL = "Not available"
 
 # Prefixes that should NOT be copied to the prompt
-_NON_COPYABLE_PREFIXES = (
-    MSG_NOT_ON_CIVITAI,
-    MSG_NO_KEYWORDS,
-    "Network error",
-    "CivitAI API error",
-    "Error:",
-    "Error reading",
-)
+_NON_COPYABLE_PREFIXES = (MSG_NOT_ON_CIVITAI, MSG_NO_KEYWORDS, "Network error", "CivitAI API error", "Error:", "Error reading")
 
 # CivitAI sometimes stores a placeholder word instead of a real prompt (e.g.
 # metadata scrubbed by the uploader's tool). Treated as "no prompt" only when
 # the ENTIRE trimmed prompt is just one of these words — case-insensitive.
 # Edit this set to add/remove placeholder words.
-_PLACEHOLDER_PROMPT_WORDS = frozenset(
-    {
-        "unknown",
-        "not specified",
-        "null",
-        "false",
-        "no",
-        "undefined",
-        "embedded",
-        "empty",
-        "placeholder",
-        "n/a",
-    }
-)
+_PLACEHOLDER_PROMPT_WORDS = frozenset({"unknown", "not specified", "null", "false", "no", "undefined", "embedded", "empty", "placeholder", "n/a"})
 
 
 def _is_placeholder_prompt(text: str) -> bool:
@@ -286,13 +247,7 @@ class LoraKeywordsFinder(scripts.Script):
         domain = "civitai.red" if nsfw_level > 2 else "civitai.com"
         base_url = f"https://{domain}/models/{model_id}"
 
-        model_url = (
-            f"{base_url}?modelVersionId={version_id}"
-            if model_id and version_id
-            else base_url
-            if model_id
-            else None
-        )
+        model_url = f"{base_url}?modelVersionId={version_id}" if model_id and version_id else base_url if model_id else None
         model_name = api_data.get("model", {}).get("name")
         words = api_data.get("trainedWords") or []
         words = [self._normalize_keyword(w) for w in words if w.strip()]
@@ -324,12 +279,8 @@ class LoraKeywordsFinder(scripts.Script):
             "images": [
                 {
                     "url": img.get("url"),
-                    "prompt": img.get("meta", {}).get("prompt", "")
-                    if isinstance(img.get("meta"), dict)
-                    else "",
-                    "negativePrompt": img.get("meta", {}).get("negativePrompt", "")
-                    if isinstance(img.get("meta"), dict)
-                    else "",
+                    "prompt": img.get("meta", {}).get("prompt", "") if isinstance(img.get("meta"), dict) else "",
+                    "negativePrompt": img.get("meta", {}).get("negativePrompt", "") if isinstance(img.get("meta"), dict) else "",
                     "nsfwLevel": img.get("nsfwLevel"),
                 }
                 for img in api_data.get("images", [])
@@ -339,16 +290,7 @@ class LoraKeywordsFinder(scripts.Script):
         }
 
     def _not_found_entry(self, file_hash: str) -> dict:
-        return {
-            "hash": file_hash,
-            "model_id": None,
-            "version_id": None,
-            "model_name": None,
-            "model_url": None,
-            "keywords": [],
-            "images": [],
-            "not_found": True,
-        }
+        return {"hash": file_hash, "model_id": None, "version_id": None, "model_name": None, "model_url": None, "keywords": [], "images": [], "not_found": True}
 
     # ── Utilities ──────────────────────────────────────────────────────────────
 
@@ -402,20 +344,14 @@ class LoraKeywordsFinder(scripts.Script):
             if not pending:
                 return
             if attempt < attempts - 1:
-                print(
-                    f"[🧙 LoRA Keywords Finder] Waiting for {len(pending)}"
-                    f" unresolved symlink {plural(len(pending), 'target')}…"
-                )
+                print(f"[🧙 LoRA Keywords Finder] Waiting for {len(pending)} unresolved symlink {plural(len(pending), 'target')}…")
                 time.sleep(delay)
         for path in pending:
             try:
                 target = os.readlink(path)
             except OSError:
                 target = "?"
-            print(
-                f"[🧙 LoRA Keywords Finder] Symlink target unavailable (broken or not"
-                f" mounted): '{path}' -> '{target}'"
-            )
+            print(f"[🧙 LoRA Keywords Finder] Symlink target unavailable (broken or not mounted): '{path}' -> '{target}'")
 
     _cached_lora_files = None
     _cached_lora_time = 0.0
@@ -441,9 +377,7 @@ class LoraKeywordsFinder(scripts.Script):
             visited_dirs.add(root_key)
 
         root_files, subdir_files = [], []
-        for root, dirs, files in os.walk(
-            lora_dir, followlinks=follow_symlinks, onerror=self._walk_error
-        ):
+        for root, dirs, files in os.walk(lora_dir, followlinks=follow_symlinks, onerror=self._walk_error):
             if follow_symlinks:
                 # Following links can revisit a directory through a second path
                 # or loop forever — keep each real directory exactly once.
@@ -456,33 +390,16 @@ class LoraKeywordsFinder(scripts.Script):
                     keep.append(d)
                 dirs[:] = keep
             for filename in files:
-                if filename.lower().endswith(
-                    (
-                        ".bin",
-                        ".ckpt",
-                        ".gguf",
-                        ".onnx",
-                        ".pkl",
-                        ".pt",
-                        ".pth",
-                        ".pwf",
-                        ".safetensors",
-                    )
-                ):
+                if filename.lower().endswith((".bin", ".ckpt", ".gguf", ".onnx", ".pkl", ".pt", ".pth", ".pwf", ".safetensors")):
                     rel_path = os.path.relpath(root, lora_dir)
                     if rel_path == ".":
                         root_files.append(filename)
                     else:
                         subdir_files.append(os.path.join(rel_path, filename))
         root_files.sort(key=str.lower)
-        subdir_files.sort(
-            key=lambda x: tuple(p.lower() for p in os.path.normpath(x).split(os.sep))
-        )
+        subdir_files.sort(key=lambda x: tuple(p.lower() for p in os.path.normpath(x).split(os.sep)))
         result = root_files + subdir_files
-        print(
-            f"[🧙 LoRA Keywords Finder] Listed {len(result)} {plural(len(result), 'file')}"
-            f" in '{lora_dir}' (follow symlinks: {'on' if follow_symlinks else 'off'})"
-        )
+        print(f"[🧙 LoRA Keywords Finder] Listed {len(result)} {plural(len(result), 'file')} in '{lora_dir}' (follow symlinks: {'on' if follow_symlinks else 'off'})")
 
         LoraKeywordsFinder._cached_lora_files = list(result)
         LoraKeywordsFinder._cached_symlink_state = follow_symlinks
@@ -541,9 +458,7 @@ class LoraKeywordsFinder(scripts.Script):
         ext = "." + path.rsplit(".", 1)[-1] if "." in path else ""
         return ext in LoraKeywordsFinder._ALLOWED_IMAGE_EXTS
 
-    def _fetch_community_images(
-        self, version_id: str, show_nsfw: bool = False
-    ) -> tuple:
+    def _fetch_community_images(self, version_id: str, show_nsfw: bool = False) -> tuple:
         import requests
 
         str_version_id = str(version_id)
@@ -554,16 +469,11 @@ class LoraKeywordsFinder(scripts.Script):
             else:
                 url += "&browsingLevel=3"
 
-            resp = requests.get(
-                url,
-                timeout=5,
-            )
+            resp = requests.get(url, timeout=5)
             if resp.status_code == 200:
                 data = resp.json()
                 if "error" in data:
-                    print(
-                        f"[🧙 LoRA Keywords Finder] API error fetching community images: {data['error']}"
-                    )
+                    print(f"[🧙 LoRA Keywords Finder] API error fetching community images: {data['error']}")
                     return [], "", data["error"]
 
                 items = data.get("items", [])
@@ -571,39 +481,22 @@ class LoraKeywordsFinder(scripts.Script):
                 valid_images = []
                 for item in items:
                     meta = item.get("meta")
-                    if not meta or not (
-                        meta.get("prompt") or meta.get("negativePrompt")
-                    ):
+                    if not meta or not (meta.get("prompt") or meta.get("negativePrompt")):
                         continue
                     # Verify this image actually used THIS specific version via civitaiResources.
                     # CivitAI may tag images to a model even if a different version was used.
                     resources = meta.get("civitaiResources", [])
                     if resources:
-                        used_versions = {
-                            str(r.get("modelVersionId"))
-                            for r in resources
-                            if r.get("modelVersionId")
-                        }
+                        used_versions = {str(r.get("modelVersionId")) for r in resources if r.get("modelVersionId")}
                         if str_version_id not in used_versions:
                             continue  # Image was tagged to model but used a different version
-                    valid_images.append(
-                        {
-                            "id": item.get("id"),
-                            "url": item.get("url", ""),
-                            "prompt": meta.get("prompt", ""),
-                            "negativePrompt": meta.get("negativePrompt", ""),
-                            "nsfw": item.get("nsfw"),
-                            "nsfwLevel": item.get("nsfwLevel"),
-                        }
-                    )
+                    valid_images.append({"id": item.get("id"), "url": item.get("url", ""), "prompt": meta.get("prompt", ""), "negativePrompt": meta.get("negativePrompt", ""), "nsfw": item.get("nsfw"), "nsfwLevel": item.get("nsfwLevel")})
                     if len(valid_images) >= 21:
                         break
                 return valid_images, next_page, ""
             else:
                 msg = f"HTTP {resp.status_code}"
-                print(
-                    f"[🧙 LoRA Keywords Finder] {msg} fetching community images: {resp.text[:200]!r}"
-                )
+                print(f"[🧙 LoRA Keywords Finder] {msg} fetching community images: {resp.text[:200]!r}")
                 return [], "", msg
         except Exception as e:
             print(f"[🧙 LoRA Keywords Finder] Error fetching community images: {e}")
@@ -635,39 +528,23 @@ class LoraKeywordsFinder(scripts.Script):
         """
         for attempt in range(2):
             try:
-                resp = requests.post(
-                    CIVITAI_BATCH_URL,
-                    json=chunk,
-                    timeout=30,
-                )
+                resp = requests.post(CIVITAI_BATCH_URL, json=chunk, timeout=30)
                 if resp.status_code == 200:
                     return True, self._parse_batch_response(resp.json())
                 if resp.status_code == 404:
                     # No hash in this batch matched anything on CivitAI —
                     # not a failure, nothing to retry.
                     return True, {}
-                print(
-                    f"[🧙 LoRA Keywords Finder] Batch attempt {attempt + 1} failed:"
-                    f" HTTP {resp.status_code} — {resp.text[:200]!r}"
-                )
+                print(f"[🧙 LoRA Keywords Finder] Batch attempt {attempt + 1} failed: HTTP {resp.status_code} — {resp.text[:200]!r}")
             except Exception as e:
-                print(
-                    f"[🧙 LoRA Keywords Finder] Batch attempt {attempt + 1} exception: {e}"
-                )
+                print(f"[🧙 LoRA Keywords Finder] Batch attempt {attempt + 1} exception: {e}")
             if attempt == 0:
                 time.sleep(1)
         return False, {}
 
     # ── UI action handlers ─────────────────────────────────────────────────────
 
-    def _entry_to_ui(
-        self,
-        entry: dict,
-        file_hash: str,
-        show_images: bool = True,
-        include_community: bool = False,
-        show_nsfw: bool = False,
-    ):
+    def _entry_to_ui(self, entry: dict, file_hash: str, show_images: bool = True, include_community: bool = False, show_nsfw: bool = False):
         images = []
         next_page_attr = ""
         using_community = False
@@ -688,9 +565,7 @@ class LoraKeywordsFinder(scripts.Script):
             next_page = ""
             community_err = ""
             if include_community and entry.get("version_id"):
-                community_images, next_page, community_err = (
-                    self._fetch_community_images(entry.get("version_id"), show_nsfw)
-                )
+                community_images, next_page, community_err = self._fetch_community_images(entry.get("version_id"), show_nsfw)
                 using_community = bool(community_images)
 
             # Author images always come first; community images (when
@@ -800,18 +675,10 @@ class LoraKeywordsFinder(scripts.Script):
                 if include_community and community_err:
                     mode_label += " (Community images temporarily unavailable)"
             mode_attr = 'data-mode="community"' if using_community else ""
-            version_id_attr = (
-                f' data-version-id="{entry.get("version_id", "")}"'
-                if using_community
-                else ""
-            )
+            version_id_attr = f' data-version-id="{entry.get("version_id", "")}"' if using_community else ""
             html_content = f'<span style="display: block; font-size: 14px; font-weight: 500;">{mode_label}</span><div class="lkf-carousel-container" data-current-index="0" {mode_attr}{version_id_attr}{next_page_attr}>{img_tags}{arrows_html}</div>'
             if not img_tags_list:
-                msg = (
-                    "Model not found on CivitAI."
-                    if entry.get("not_found")
-                    else "No example images found for this model."
-                )
+                msg = "Model not found on CivitAI." if entry.get("not_found") else "No example images found for this model."
                 if community_err and not entry.get("not_found"):
                     msg = "CivitAI API is currently overloaded or unavailable. Could not fetch images."
                 html_content = f'<div style="padding: 20px; text-align: center; color: #888; border: 1px dashed #555; border-radius: 8px;">{msg}</div>'
@@ -877,13 +744,9 @@ class LoraKeywordsFinder(scripts.Script):
     def reload_lora_list(self):
         files = self._list_lora_files(force_reload=True)
         choices = [""] + files
-        return gr.update(
-            choices=choices, value="", label=f"File ({len(files)} available)"
-        )
+        return gr.update(choices=choices, value="", label=f"File ({len(files)} available)")
 
-    def get_trained_words(
-        self, lora_file, show_images=True, include_community=False, show_nsfw=False
-    ):
+    def get_trained_words(self, lora_file, show_images=True, include_community=False, show_nsfw=False):
         """Returns (kw, name, hash, url,
         copy_kw_btn, copy_name_btn, copy_hash_btn, copy_url_btn,
         copy_to_prompt_btn, open_url_btn, open_hash_btn)."""
@@ -939,25 +802,17 @@ class LoraKeywordsFinder(scripts.Script):
         cached = self._load_cache(file_hash)
         if cached is not None:
             print(f"[🧙 LoRA Keywords Finder] Loaded from cache for '{lora_file}'")
-            return self._entry_to_ui(
-                cached, file_hash, show_images, include_community, show_nsfw
-            )
+            return self._entry_to_ui(cached, file_hash, show_images, include_community, show_nsfw)
 
         # Not cached — fetch from CivitAI
         try:
             entry = self._fetch_single(file_hash)
             self._save_cache(entry)
-            return self._entry_to_ui(
-                entry, file_hash, show_images, include_community, show_nsfw
-            )
+            return self._entry_to_ui(entry, file_hash, show_images, include_community, show_nsfw)
         except Exception as e:
             err = str(e)
             print(f"[🧙 LoRA Keywords Finder] Fetch error for '{lora_file}': {err}")
-            msg = (
-                f"CivitAI API error ({err})"
-                if err.startswith("HTTP")
-                else "Network error — could not reach CivitAI"
-            )
+            msg = f"CivitAI API error ({err})" if err.startswith("HTTP") else "Network error — could not reach CivitAI"
             return (
                 gr.update(value=msg),
                 gr.update(value=""),
@@ -1013,9 +868,7 @@ class LoraKeywordsFinder(scripts.Script):
 
         for lora_file in lora_files:
             if self._cancel_fetch.is_set():
-                yield gr.update(
-                    value="⛔ Cancelled during hashing. No files were modified."
-                )
+                yield gr.update(value="⛔ Cancelled during hashing. No files were modified.")
                 return
             full_path = os.path.join(shared.cmd_opts.lora_dir, lora_file)
             try:
@@ -1032,18 +885,12 @@ class LoraKeywordsFinder(scripts.Script):
         if not to_fetch:
             msg = f"✔️ All {total} {plural(total, 'LoRA')} already cached."
             if hash_errors:
-                msg += (
-                    f" ({hash_errors} {plural(hash_errors, 'file')} could not be read)"
-                )
+                msg += f" ({hash_errors} {plural(hash_errors, 'file')} could not be read)"
             yield gr.update(value=msg)
             return
 
         n_to_fetch = len(to_fetch)
-        yield gr.update(
-            value=f"⬇️ Fetching metadata for {n_to_fetch}"
-            f" {plural(n_to_fetch, 'LoRA')}"
-            f" (skipped {skipped} already cached)…"
-        )
+        yield gr.update(value=f"⬇️ Fetching metadata for {n_to_fetch} {plural(n_to_fetch, 'LoRA')} (skipped {skipped} already cached)…")
 
         CHUNK_SIZE = 100
         all_hashes = list(to_fetch.keys())
@@ -1053,46 +900,26 @@ class LoraKeywordsFinder(scripts.Script):
 
         for chunk_index in range(total_chunks):
             if self._cancel_fetch.is_set():
-                yield gr.update(
-                    value=f"⛔ Cancelled after {done} of {n_to_fetch} {plural(n_to_fetch, 'LoRA')}."
-                    f" Already-completed entries were saved."
-                )
+                yield gr.update(value=f"⛔ Cancelled after {done} of {n_to_fetch} {plural(n_to_fetch, 'LoRA')}. Already-completed entries were saved.")
                 return
 
-            chunk = all_hashes[
-                chunk_index * CHUNK_SIZE : (chunk_index + 1) * CHUNK_SIZE
-            ]
-            yield gr.update(
-                value=f"⬇️ Batch {chunk_index + 1}/{total_chunks}"
-                f" ({len(chunk)} {plural(len(chunk), 'hash', 'es')}) — fetching…"
-            )
+            chunk = all_hashes[chunk_index * CHUNK_SIZE : (chunk_index + 1) * CHUNK_SIZE]
+            yield gr.update(value=f"⬇️ Batch {chunk_index + 1}/{total_chunks} ({len(chunk)} {plural(len(chunk), 'hash', 'es')}) — fetching…")
 
             batch_ok, result_map = self._fetch_batch_chunk(chunk)
 
             if not batch_ok:
                 # Batch endpoint failed — fall back to individual requests
-                print(
-                    f"[🧙 LoRA Keywords Finder] Batch {chunk_index + 1} failed;"
-                    f" falling back to individual requests for {len(chunk)}"
-                    f" {plural(len(chunk), 'hash', 'es')}"
-                )
-                yield gr.update(
-                    value=f"⚠️ Batch {chunk_index + 1} hit a snag — checking those"
-                    f" {len(chunk)} {plural(len(chunk), 'hash', 'es')} one by one…"
-                )
+                print(f"[🧙 LoRA Keywords Finder] Batch {chunk_index + 1} failed; falling back to individual requests for {len(chunk)} {plural(len(chunk), 'hash', 'es')}")
+                yield gr.update(value=f"⚠️ Batch {chunk_index + 1} hit a snag — checking those {len(chunk)} {plural(len(chunk), 'hash', 'es')} one by one…")
                 for h in chunk:
                     if self._cancel_fetch.is_set():
-                        yield gr.update(
-                            value=f"⛔ Cancelled after {done} of {n_to_fetch} {plural(n_to_fetch, 'LoRA')}."
-                            f" Already-completed entries were saved."
-                        )
+                        yield gr.update(value=f"⛔ Cancelled after {done} of {n_to_fetch} {plural(n_to_fetch, 'LoRA')}. Already-completed entries were saved.")
                         return
                     try:
                         entry = self._fetch_single(h)
                     except Exception as e:
-                        print(
-                            f"[🧙 LoRA Keywords Finder] Individual fetch failed for {h}: {e}"
-                        )
+                        print(f"[🧙 LoRA Keywords Finder] Individual fetch failed for {h}: {e}")
                         entry = self._not_found_entry(h)
                         api_errors += 1
                     self._save_cache(entry)
@@ -1100,25 +927,14 @@ class LoraKeywordsFinder(scripts.Script):
             else:
                 for h in chunk:
                     if self._cancel_fetch.is_set():
-                        yield gr.update(
-                            value=f"⛔ Cancelled after {done} of {n_to_fetch} {plural(n_to_fetch, 'LoRA')}."
-                            f" Already-completed entries were saved."
-                        )
+                        yield gr.update(value=f"⛔ Cancelled after {done} of {n_to_fetch} {plural(n_to_fetch, 'LoRA')}. Already-completed entries were saved.")
                         return
-                    entry = (
-                        self._build_entry_from_api(h, result_map[h])
-                        if h in result_map
-                        else self._not_found_entry(h)
-                    )
+                    entry = self._build_entry_from_api(h, result_map[h]) if h in result_map else self._not_found_entry(h)
                     self._save_cache(entry)
                     done += 1
 
         # Final summary
-        not_found_count = sum(
-            1
-            for h in all_hashes
-            if self._load_cache(h) and self._load_cache(h).get("not_found")
-        )
+        not_found_count = sum(1 for h in all_hashes if self._load_cache(h) and self._load_cache(h).get("not_found"))
         found_count = done - not_found_count
         parts = [f"✔️ Done! Processed {done} {plural(done, 'LoRA')}."]
         parts.append(f"Found on CivitAI: {found_count}, not found: {not_found_count}.")
@@ -1210,9 +1026,7 @@ class LoraKeywordsFinder(scripts.Script):
         }
         """
 
-        with gr.Accordion(
-            "🧙 LoRA Keywords Finder", open=False, elem_id="lkf_container"
-        ):
+        with gr.Accordion("🧙 LoRA Keywords Finder", open=False, elem_id="lkf_container"):
             # CSS: fix dropdown padding/margin to match textboxes
             gr.HTML(
                 """<style>
@@ -1255,145 +1069,56 @@ class LoraKeywordsFinder(scripts.Script):
             with gr.Row(variant="compact"):
                 files = self._list_lora_files()
                 choices = [""] + files
-                lora_dropdown = gr.Dropdown(
-                    label=f"File ({len(files)} available)",
-                    elem_id="lkf_lora_dropdown",
-                    elem_classes=["lkf-field"],
-                    choices=choices,
-                    value="",
-                    type="value",
-                )
-                reload_loras = gr.Button(
-                    "🔄", scale=0, elem_classes=["tool", "lkf-reload-btn"]
-                )
+                lora_dropdown = gr.Dropdown(label=f"File ({len(files)} available)", elem_id="lkf_lora_dropdown", elem_classes=["lkf-field"], choices=choices, value="", type="value")
+                reload_loras = gr.Button("🔄", scale=0, elem_classes=["tool", "lkf-reload-btn"])
 
             gr.HTML("<div style='height: 8px'></div>")
 
             # ── Row 2: Keywords [📋 copy] [⚡️ to prompt] ────────────────────
             with gr.Row(variant="compact"):
-                trained_words_display = gr.Textbox(
-                    label="Keywords",
-                    interactive=False,
-                    lines=1,
-                    value="",
-                    placeholder="Select a file to find its keywords",
-                    elem_classes=["lkf-field"],
-                )
-                copy_kw_btn = gr.Button(
-                    "📋", scale=0, elem_classes=["tool"], interactive=False
-                )
-                copy_to_prompt_btn = gr.Button(
-                    "⚡️", scale=0, elem_classes=["tool"], interactive=False
-                )
+                trained_words_display = gr.Textbox(label="Keywords", interactive=False, lines=1, value="", placeholder="Select a file to find its keywords", elem_classes=["lkf-field"])
+                copy_kw_btn = gr.Button("📋", scale=0, elem_classes=["tool"], interactive=False)
+                copy_to_prompt_btn = gr.Button("⚡️", scale=0, elem_classes=["tool"], interactive=False)
 
             gr.HTML("<div style='height: 8px'></div>")
 
-            with gr.Column(
-                visible=load_config().get("show_advanced", False)
-            ) as adv_fields_col:
+            with gr.Column(visible=load_config().get("show_advanced", False)) as adv_fields_col:
                 # ── Row 3: Name [📋 copy] ─────────────────────────────────────────
                 with gr.Row(variant="compact"):
-                    name_display = gr.Textbox(
-                        label="Model Name",
-                        interactive=False,
-                        lines=1,
-                        value="",
-                        placeholder="",
-                        elem_classes=["lkf-field"],
-                    )
-                    copy_name_btn = gr.Button(
-                        "📋", scale=0, elem_classes=["tool"], interactive=False
-                    )
+                    name_display = gr.Textbox(label="Model Name", interactive=False, lines=1, value="", placeholder="", elem_classes=["lkf-field"])
+                    copy_name_btn = gr.Button("📋", scale=0, elem_classes=["tool"], interactive=False)
 
                 gr.HTML("<div style='height: 8px'></div>")
 
                 # ── Row 3.5: Base Model and Type ─────────────────────────────────────
                 with gr.Row(elem_classes=["lkf-base-model-row"]):
-                    base_model_display = gr.Textbox(
-                        label="Base model",
-                        interactive=False,
-                        max_lines=1,
-                        elem_classes=["lkf-field"],
-                    )
-                    model_type_display = gr.Textbox(
-                        label="Model Type",
-                        interactive=False,
-                        max_lines=1,
-                        do_not_save_to_config=True,
-                        elem_classes=["lkf-field"],
-                    )
-                    price_display = gr.Textbox(
-                        label="Access",
-                        interactive=False,
-                        max_lines=1,
-                        do_not_save_to_config=True,
-                        elem_classes=["lkf-field"],
-                    )
+                    base_model_display = gr.Textbox(label="Base model", interactive=False, max_lines=1, elem_classes=["lkf-field"])
+                    model_type_display = gr.Textbox(label="Model Type", interactive=False, max_lines=1, do_not_save_to_config=True, elem_classes=["lkf-field"])
+                    price_display = gr.Textbox(label="Access", interactive=False, max_lines=1, do_not_save_to_config=True, elem_classes=["lkf-field"])
 
                 gr.HTML("<div style='height: 8px'></div>")
 
                 # ── Row 4: CivitAI URL [📋 copy] [🌐 open] ───────────────────────
                 with gr.Row(variant="compact"):
-                    url_display = gr.Textbox(
-                        label="Model Page",
-                        interactive=False,
-                        max_lines=1,
-                        value="",
-                        placeholder="",
-                        elem_classes=["lkf-field"],
-                    )
-                    copy_url_btn = gr.Button(
-                        "📋", scale=0, elem_classes=["tool"], interactive=False
-                    )
-                    open_url_btn = gr.Button(
-                        "🌐", scale=0, elem_classes=["tool"], interactive=False
-                    )
+                    url_display = gr.Textbox(label="Model Page", interactive=False, max_lines=1, value="", placeholder="", elem_classes=["lkf-field"])
+                    copy_url_btn = gr.Button("📋", scale=0, elem_classes=["tool"], interactive=False)
+                    open_url_btn = gr.Button("🌐", scale=0, elem_classes=["tool"], interactive=False)
 
                 gr.HTML("<div style='height: 8px'></div>")
 
                 # ── Row 4.5: Download URL [📋 copy] [🌐 open] ──────────────────────
                 with gr.Row(variant="compact"):
-                    download_url_display = gr.Textbox(
-                        label="Download URL",
-                        show_copy_button=False,
-                        interactive=False,
-                        max_lines=1,
-                        scale=1,
-                        elem_classes=["lkf-field"],
-                    )
-                    copy_dl_url_btn = gr.Button(
-                        "📋",
-                        elem_classes=["lkf-btn-copy", "tool"],
-                        scale=0,
-                        min_width=40,
-                        interactive=False,
-                    )
-                    open_dl_url_btn = gr.Button(
-                        "🌐",
-                        elem_classes=["lkf-btn-open-browser", "tool"],
-                        scale=0,
-                        min_width=40,
-                        interactive=False,
-                    )
+                    download_url_display = gr.Textbox(label="Download URL", show_copy_button=False, interactive=False, max_lines=1, scale=1, elem_classes=["lkf-field"])
+                    copy_dl_url_btn = gr.Button("📋", elem_classes=["lkf-btn-copy", "tool"], scale=0, min_width=40, interactive=False)
+                    open_dl_url_btn = gr.Button("🌐", elem_classes=["lkf-btn-open-browser", "tool"], scale=0, min_width=40, interactive=False)
 
                 gr.HTML("<div style='height: 8px'></div>")
 
                 # ── Row 5: SHA-256 hash [📋 copy] [🔍 open API] ──────────────────
                 with gr.Row(variant="compact"):
-                    hash_display = gr.Textbox(
-                        label="SHA-256",
-                        interactive=False,
-                        max_lines=1,
-                        value="",
-                        placeholder="",
-                        elem_classes=["lkf-field"],
-                    )
-                    copy_hash_btn = gr.Button(
-                        "📋", scale=0, elem_classes=["tool"], interactive=False
-                    )
-                    open_hash_btn = gr.Button(
-                        "🌐", scale=0, elem_classes=["tool"], interactive=False
-                    )
+                    hash_display = gr.Textbox(label="SHA-256", interactive=False, max_lines=1, value="", placeholder="", elem_classes=["lkf-field"])
+                    copy_hash_btn = gr.Button("📋", scale=0, elem_classes=["tool"], interactive=False)
+                    open_hash_btn = gr.Button("🌐", scale=0, elem_classes=["tool"], interactive=False)
 
                 gr.HTML("<div style='height: 8px'></div>")
 
@@ -1406,68 +1131,23 @@ class LoraKeywordsFinder(scripts.Script):
             with gr.Accordion("⚙️ Advanced Options", open=False):
                 with gr.Row(elem_classes=["lkf-opt-row"]):
                     with gr.Column(elem_classes=["lkf-opt-col"]):
-                        show_adv_fields_cb = gr.Checkbox(
-                            label="Show advanced fields",
-                            value=lambda: load_config().get("show_advanced", False),
-                            elem_classes=option_classes("show-adv-fields"),
-                        )
-                        follow_symlinks_cb = gr.Checkbox(
-                            label="Follow symbolic links",
-                            value=lambda: load_config().get("follow_symlinks", False),
-                            do_not_save_to_config=True,
-                            elem_classes=option_classes("follow-symlinks"),
-                        )
-                        skip_dialog_cb = gr.Checkbox(
-                            label="Skip paste prompt dialog",
-                            value=lambda: load_config().get("skip_dialog", False),
-                            do_not_save_to_config=True,
-                            elem_classes=option_classes("skip-dialog"),
-                        )
+                        show_adv_fields_cb = gr.Checkbox(label="Show advanced fields", value=lambda: load_config().get("show_advanced", False), elem_classes=option_classes("show-adv-fields"))
+                        follow_symlinks_cb = gr.Checkbox(label="Follow symbolic links", value=lambda: load_config().get("follow_symlinks", False), do_not_save_to_config=True, elem_classes=option_classes("follow-symlinks"))
+                        skip_dialog_cb = gr.Checkbox(label="Skip paste prompt dialog", value=lambda: load_config().get("skip_dialog", False), do_not_save_to_config=True, elem_classes=option_classes("skip-dialog"))
                     with gr.Column(elem_classes=["lkf-opt-col"]):
-                        show_images_cb = gr.Checkbox(
-                            label="Show image gallery",
-                            value=lambda: load_config().get("show_images", True),
-                            elem_classes=option_classes("show-images"),
-                        )
-                        include_community_cb = gr.Checkbox(
-                            label="Include community images",
-                            value=lambda: load_config().get(
-                                "include_community_images", False
-                            ),
-                            do_not_save_to_config=True,
-                            elem_classes=option_classes("include-community"),
-                        )
-                        show_nsfw_cb = gr.Checkbox(
-                            label="Show NSFW images",
-                            value=lambda: load_config().get("show_nsfw_images", False),
-                            do_not_save_to_config=True,
-                            elem_classes=option_classes("show-nsfw"),
-                        )
+                        show_images_cb = gr.Checkbox(label="Show image gallery", value=lambda: load_config().get("show_images", True), elem_classes=option_classes("show-images"))
+                        include_community_cb = gr.Checkbox(label="Include community images", value=lambda: load_config().get("include_community_images", False), do_not_save_to_config=True, elem_classes=option_classes("include-community"))
+                        show_nsfw_cb = gr.Checkbox(label="Show NSFW images", value=lambda: load_config().get("show_nsfw_images", False), do_not_save_to_config=True, elem_classes=option_classes("show-nsfw"))
 
                 with gr.Row():
                     clear_cache_btn = gr.Button("🗑️ Clear Cache", variant="secondary")
-                    fetch_all_btn = gr.Button(
-                        "⬇️ Fetch All Metadata",
-                        variant="secondary",
-                        elem_id="lkf_fetch_all_btn",
-                    )
-                    cancel_fetch_btn = gr.Button(
-                        "⛔ Cancel", variant="stop", visible=False
-                    )
+                    fetch_all_btn = gr.Button("⬇️ Fetch All Metadata", variant="secondary", elem_id="lkf_fetch_all_btn")
+                    cancel_fetch_btn = gr.Button("⛔ Cancel", variant="stop", visible=False)
                 gr.HTML("<div style='height: 8px'></div>")
-                adv_status = gr.Textbox(
-                    show_label=False,
-                    interactive=False,
-                    value="",
-                    placeholder="Status will appear here…",
-                )
+                adv_status = gr.Textbox(show_label=False, interactive=False, value="", placeholder="Status will appear here…")
                 # Bridge element: JS reads this to check skip_dialog setting
                 init_skip = "1" if load_config().get("skip_dialog", False) else "0"
-                skip_dialog_bridge = gr.HTML(
-                    value=f'<b class="lkf-cfg-skip-dialog">{init_skip}</b>',
-                    visible=False,
-                    elem_classes=["lkf-hidden-bridge"],
-                )
+                skip_dialog_bridge = gr.HTML(value=f'<b class="lkf-cfg-skip-dialog">{init_skip}</b>', visible=False, elem_classes=["lkf-hidden-bridge"])
 
             # ── Event handlers ────────────────────────────────────────────────
 
@@ -1477,26 +1157,16 @@ class LoraKeywordsFinder(scripts.Script):
                 save_config(cfg)
                 return gr.update(visible=show_adv)
 
-            show_adv_fields_cb.change(
-                fn=on_show_adv_change,
-                inputs=[show_adv_fields_cb],
-                outputs=[adv_fields_col],
-            )
+            show_adv_fields_cb.change(fn=on_show_adv_change, inputs=[show_adv_fields_cb], outputs=[adv_fields_col])
 
             def on_skip_dialog_change(skip):
                 cfg = load_config()
                 cfg["skip_dialog"] = skip
                 save_config(cfg)
                 bridge_val = "1" if skip else "0"
-                return gr.update(
-                    value=f'<b class="lkf-cfg-skip-dialog">{bridge_val}</b>'
-                )
+                return gr.update(value=f'<b class="lkf-cfg-skip-dialog">{bridge_val}</b>')
 
-            skip_dialog_cb.change(
-                fn=on_skip_dialog_change,
-                inputs=[skip_dialog_cb],
-                outputs=[skip_dialog_bridge],
-            )
+            skip_dialog_cb.change(fn=on_skip_dialog_change, inputs=[skip_dialog_cb], outputs=[skip_dialog_bridge])
 
             def on_follow_symlinks_change(follow):
                 cfg = load_config()
@@ -1505,36 +1175,21 @@ class LoraKeywordsFinder(scripts.Script):
                 # Reload the file list immediately so new symlinked dirs appear
                 files = self._list_lora_files()
                 choices = [""] + files
-                return gr.update(
-                    choices=choices, label=f"File ({len(files)} available)", value=""
-                )
+                return gr.update(choices=choices, label=f"File ({len(files)} available)", value="")
 
-            follow_symlinks_cb.change(
-                fn=on_follow_symlinks_change,
-                inputs=[follow_symlinks_cb],
-                outputs=[lora_dropdown],
-            )
+            follow_symlinks_cb.change(fn=on_follow_symlinks_change, inputs=[follow_symlinks_cb], outputs=[lora_dropdown])
 
-            def on_show_images_change(
-                lora_file, show_images, include_community, show_nsfw
-            ):
+            def on_show_images_change(lora_file, show_images, include_community, show_nsfw):
                 cfg = load_config()
                 cfg["show_images"] = show_images
                 cfg["include_community_images"] = include_community
                 cfg["show_nsfw_images"] = show_nsfw
                 save_config(cfg)
-                return self.get_trained_words(
-                    lora_file, show_images, include_community, show_nsfw
-                )
+                return self.get_trained_words(lora_file, show_images, include_community, show_nsfw)
 
             show_images_cb.change(
                 fn=on_show_images_change,
-                inputs=[
-                    lora_dropdown,
-                    show_images_cb,
-                    include_community_cb,
-                    show_nsfw_cb,
-                ],
+                inputs=[lora_dropdown, show_images_cb, include_community_cb, show_nsfw_cb],
                 outputs=[
                     trained_words_display,
                     name_display,
@@ -1559,12 +1214,7 @@ class LoraKeywordsFinder(scripts.Script):
 
             include_community_cb.change(
                 fn=on_show_images_change,
-                inputs=[
-                    lora_dropdown,
-                    show_images_cb,
-                    include_community_cb,
-                    show_nsfw_cb,
-                ],
+                inputs=[lora_dropdown, show_images_cb, include_community_cb, show_nsfw_cb],
                 outputs=[
                     trained_words_display,
                     name_display,
@@ -1589,12 +1239,7 @@ class LoraKeywordsFinder(scripts.Script):
 
             show_nsfw_cb.change(
                 fn=on_show_images_change,
-                inputs=[
-                    lora_dropdown,
-                    show_images_cb,
-                    include_community_cb,
-                    show_nsfw_cb,
-                ],
+                inputs=[lora_dropdown, show_images_cb, include_community_cb, show_nsfw_cb],
                 outputs=[
                     trained_words_display,
                     name_display,
@@ -1619,12 +1264,7 @@ class LoraKeywordsFinder(scripts.Script):
 
             lora_dropdown.change(
                 fn=self.get_trained_words,
-                inputs=[
-                    lora_dropdown,
-                    show_images_cb,
-                    include_community_cb,
-                    show_nsfw_cb,
-                ],
+                inputs=[lora_dropdown, show_images_cb, include_community_cb, show_nsfw_cb],
                 outputs=[
                     trained_words_display,
                     name_display,
@@ -1647,99 +1287,35 @@ class LoraKeywordsFinder(scripts.Script):
                 ],
             )
 
-            reload_loras.click(
-                fn=self.reload_lora_list,
-                outputs=[lora_dropdown],
+            reload_loras.click(fn=self.reload_lora_list, outputs=[lora_dropdown])
+
+            copy_kw_btn.click(fn=None, inputs=[trained_words_display], outputs=None, _js=copy_clipboard_js)
+
+            copy_name_btn.click(fn=None, inputs=[name_display], outputs=None, _js=copy_clipboard_js)
+
+            copy_url_btn.click(fn=None, inputs=[url_display], outputs=None, _js=copy_clipboard_js)
+
+            copy_hash_btn.click(fn=None, inputs=[hash_display], outputs=None, _js=copy_clipboard_js)
+
+            copy_to_prompt_btn.click(fn=None, inputs=[trained_words_display], outputs=None, _js=copy_js)
+
+            open_url_btn.click(fn=None, inputs=[url_display], outputs=None, _js=open_url_js)
+
+            copy_dl_url_btn.click(fn=None, inputs=[download_url_display], outputs=[], _js=copy_clipboard_js)
+
+            open_dl_url_btn.click(fn=None, inputs=[download_url_display], outputs=[], _js=open_url_js)
+
+            open_hash_btn.click(fn=None, inputs=[hash_display], outputs=None, _js=open_hash_js)
+
+            clear_cache_btn.click(fn=self.clear_cache, outputs=[adv_status])
+
+            fetch_all_btn.click(fn=lambda: (gr.update(visible=False), gr.update(visible=True)), outputs=[fetch_all_btn, cancel_fetch_btn]).then(fn=self.fetch_all_metadata, outputs=[adv_status]).then(
+                fn=lambda: (gr.update(visible=True), gr.update(visible=False)), outputs=[fetch_all_btn, cancel_fetch_btn]
             )
 
-            copy_kw_btn.click(
-                fn=None,
-                inputs=[trained_words_display],
-                outputs=None,
-                _js=copy_clipboard_js,
-            )
+            cancel_fetch_btn.click(fn=self.cancel_fetch, outputs=[adv_status])
 
-            copy_name_btn.click(
-                fn=None,
-                inputs=[name_display],
-                outputs=None,
-                _js=copy_clipboard_js,
-            )
-
-            copy_url_btn.click(
-                fn=None,
-                inputs=[url_display],
-                outputs=None,
-                _js=copy_clipboard_js,
-            )
-
-            copy_hash_btn.click(
-                fn=None,
-                inputs=[hash_display],
-                outputs=None,
-                _js=copy_clipboard_js,
-            )
-
-            copy_to_prompt_btn.click(
-                fn=None,
-                inputs=[trained_words_display],
-                outputs=None,
-                _js=copy_js,
-            )
-
-            open_url_btn.click(
-                fn=None,
-                inputs=[url_display],
-                outputs=None,
-                _js=open_url_js,
-            )
-
-            copy_dl_url_btn.click(
-                fn=None,
-                inputs=[download_url_display],
-                outputs=[],
-                _js=copy_clipboard_js,
-            )
-
-            open_dl_url_btn.click(
-                fn=None, inputs=[download_url_display], outputs=[], _js=open_url_js
-            )
-
-            open_hash_btn.click(
-                fn=None,
-                inputs=[hash_display],
-                outputs=None,
-                _js=open_hash_js,
-            )
-
-            clear_cache_btn.click(
-                fn=self.clear_cache,
-                outputs=[adv_status],
-            )
-
-            fetch_all_btn.click(
-                fn=lambda: (gr.update(visible=False), gr.update(visible=True)),
-                outputs=[fetch_all_btn, cancel_fetch_btn],
-            ).then(
-                fn=self.fetch_all_metadata,
-                outputs=[adv_status],
-            ).then(
-                fn=lambda: (gr.update(visible=True), gr.update(visible=False)),
-                outputs=[fetch_all_btn, cancel_fetch_btn],
-            )
-
-            cancel_fetch_btn.click(
-                fn=self.cancel_fetch,
-                outputs=[adv_status],
-            )
-
-        return [
-            lora_dropdown,
-            trained_words_display,
-            name_display,
-            hash_display,
-            url_display,
-        ]
+        return [lora_dropdown, trained_words_display, name_display, hash_display, url_display]
 
 
 # Reaching this line means the whole module — including the class body above —
