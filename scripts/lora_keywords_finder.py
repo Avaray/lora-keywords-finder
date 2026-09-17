@@ -67,13 +67,14 @@ def load_config():
 def save_config(config):
     """Write config.json atomically so a crash can never leave a truncated file."""
     import time
+
     tmp_file = f"{config_file}.{threading.get_ident()}.tmp"
     try:
         with open(tmp_file, "w", encoding="utf-8") as f:
             json.dump(config, f, ensure_ascii=False, indent=2)
             f.flush()
             os.fsync(f.fileno())
-            
+
         for attempt in range(5):
             try:
                 os.replace(tmp_file, config_file)
@@ -86,7 +87,7 @@ def save_config(config):
                         time.sleep(0.05)
                         continue
                 raise
-                
+
     except Exception as e:
         # File locked / sharing violation (Windows + Linux)
         win_err = getattr(e, "winerror", None)
@@ -422,9 +423,10 @@ class LoraKeywordsFinder(scripts.Script):
 
     def _list_lora_files(self, force_reload=False):
         import time
+
         lora_dir = shared.cmd_opts.lora_dir
         follow_symlinks = load_config().get("follow_symlinks", False)
-        
+
         if not force_reload and LoraKeywordsFinder._cached_lora_files is not None:
             if LoraKeywordsFinder._cached_symlink_state == follow_symlinks:
                 if time.time() - LoraKeywordsFinder._cached_lora_time < 5.0:
@@ -481,12 +483,13 @@ class LoraKeywordsFinder(scripts.Script):
             f"[🧙 LoRA Keywords Finder] Listed {len(result)} {plural(len(result), 'file')}"
             f" in '{lora_dir}' (follow symlinks: {'on' if follow_symlinks else 'off'})"
         )
-        
+
         LoraKeywordsFinder._cached_lora_files = list(result)
         LoraKeywordsFinder._cached_symlink_state = follow_symlinks
         import time
+
         LoraKeywordsFinder._cached_lora_time = time.time()
-        
+
         return result
 
     # ── Single-hash API fetch ──────────────────────────────────────────────────
