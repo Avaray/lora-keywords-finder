@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.9.0] - 2026-09-18
+
+### Added
+- **LoRA to Prompt**: Added a new button directly in the file selector row to quickly send the selected LoRA to the prompt.
+
+### Fixed
+- Restored Python 3.10+ compatibility by fixing an f-string formatting issue.
+
 ## [2.8.0] - 2026-09-17
 
 ### Added
@@ -183,7 +191,8 @@ All notable changes to this project will be documented in this file.
 - **⚡️ Copy to Prompt** button — appends fetched keywords to the active txt2img or img2img prompt textarea.
 - Support for ForgeUI and other AUTOMATIC1111-based UIs.
 
-[Unreleased]: https://github.com/Avaray/lora-keywords-finder/compare/v2.8.0...main
+[Unreleased]: https://github.com/Avaray/lora-keywords-finder/compare/v2.9.0...main
+[2.9.0]: https://github.com/Avaray/lora-keywords-finder/compare/v2.8.0...v2.9.0
 [2.8.0]: https://github.com/Avaray/lora-keywords-finder/compare/v2.7.0...v2.8.0
 [2.7.0]: https://github.com/Avaray/lora-keywords-finder/compare/v2.6.0...v2.7.0
 [2.6.0]: https://github.com/Avaray/lora-keywords-finder/compare/v2.5.0...v2.6.0
