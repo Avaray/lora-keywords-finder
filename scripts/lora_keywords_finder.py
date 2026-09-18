@@ -586,7 +586,8 @@ class LoraKeywordsFinder(scripts.Script):
             if using_community and next_page:
                 import urllib.parse
 
-                next_page_attr = f' data-next-page="{next_page.replace('"', "&quot;")}"'
+                next_page_escaped = next_page.replace('"', "&quot;")
+                next_page_attr = f' data-next-page="{next_page_escaped}"'
 
         if show_images:
             import urllib.parse
