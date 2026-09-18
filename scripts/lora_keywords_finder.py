@@ -991,6 +991,40 @@ class LoraKeywordsFinder(scripts.Script):
         }
         """
 
+        # JS: inject <lora:name:1> from the dropdown into the active prompt
+        lora_to_prompt_js = """
+        function loraToPrompt(filename) {
+            if (!filename) return filename;
+
+            // Extract bare name: strip path separators and file extension
+            const base = filename.replace(/\\\\/g, '/').split('/').pop().replace(/\\.[^.]+$/, '');
+            const tag = '<lora:' + base + ':1>';
+
+            // Find the active tab textarea (txt2img or img2img)
+            const tabs = document.querySelector('#tabs')?.querySelector('div');
+            if (!tabs) return filename;
+            const tabButtons = tabs.querySelectorAll('button');
+            let activeTabIndex = -1;
+            tabButtons.forEach((btn, idx) => { if (btn.classList.contains('selected')) activeTabIndex = idx; });
+
+            let textarea;
+            if (activeTabIndex === 0)      textarea = document.querySelector('#txt2img_prompt textarea');
+            else if (activeTabIndex === 1) textarea = document.querySelector('#img2img_prompt textarea');
+            if (!textarea) return filename;
+
+            // Do not add if this LoRA (any weight) is already present in the prompt
+            const escapedBase = base.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');
+            if (new RegExp('<lora:' + escapedBase + ':[^>]+>', 'i').test(textarea.value)) return filename;
+
+            // Append with space separator when prompt already has content
+            const cur = textarea.value;
+            textarea.value = cur.trim() ? cur.trimEnd() + ' ' + tag : tag;
+            textarea.dispatchEvent(new Event('input',  { bubbles: true }));
+            textarea.dispatchEvent(new Event('change', { bubbles: true }));
+            return filename;
+        }
+        """
+
         # JS: open the CivitAI model URL in a new browser tab
         open_url_js = """
         function openCivitaiUrl(url) {
@@ -1072,6 +1106,7 @@ class LoraKeywordsFinder(scripts.Script):
                 choices = [""] + files
                 lora_dropdown = gr.Dropdown(label=f"File ({len(files)} available)", elem_id="lkf_lora_dropdown", elem_classes=["lkf-field"], choices=choices, value="", type="value")
                 reload_loras = gr.Button("🔄", scale=0, elem_classes=["tool", "lkf-reload-btn"])
+                lora_to_prompt_btn = gr.Button("⚡", scale=0, elem_classes=["tool"], interactive=False)
 
             gr.HTML("<div style='height: 8px'></div>")
 
@@ -1289,6 +1324,10 @@ class LoraKeywordsFinder(scripts.Script):
             )
 
             reload_loras.click(fn=self.reload_lora_list, outputs=[lora_dropdown])
+
+            lora_dropdown.change(fn=lambda v: gr.update(interactive=bool(v)), inputs=[lora_dropdown], outputs=[lora_to_prompt_btn])
+
+            lora_to_prompt_btn.click(fn=None, inputs=[lora_dropdown], outputs=None, _js=lora_to_prompt_js)
 
             copy_kw_btn.click(fn=None, inputs=[trained_words_display], outputs=None, _js=copy_clipboard_js)
 
